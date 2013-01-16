@@ -23,8 +23,11 @@ public class MACPacket {
 	
 	//Variables not written to pcap:
 	private boolean isReceived; //if true, message is logged by receiver, else it's logged by the sender
+	private byte[] milliSeconds; //additional time parameter the wiselib uses
 	private MultihopPacketTrace accordingStream; //each Node has exactly one according stream
 	private SixLoWPANpacket sixLoWPANpacket; //is created, if content is a sixlowpanpacket
+	private int linkMetric; //link quality between the nodes ( if(!isReceived) --> linkMetric == 0 ), TODO: not used
+	private Node loggingNode; //because the destination does not always match the receivers address (broadcast) if received
 	
 	
 	public MACPacket(boolean protocols){
@@ -38,6 +41,14 @@ public class MACPacket {
 
 	public void setSeconds(byte[] seconds) {
 		this.seconds = seconds;
+	}
+	
+	public byte[] getMilliSeconds() {
+		return milliSeconds;
+	}
+
+	public void setMilliSeconds(byte[] milliSeconds) {
+		this.milliSeconds = milliSeconds;
 	}
 
 	public byte[] getMicroSeconds() {
@@ -62,6 +73,14 @@ public class MACPacket {
 
 	public void setOriginalLength(byte[] originalLength) {
 		this.originalLength = originalLength;
+	}
+	
+	public Node getLoggedAt() {
+		return loggingNode;
+	}
+
+	public void setLoggedAt(Node loggingNode) {
+		this.loggingNode = loggingNode;
 	}
 
 	public byte[] getSourcePAN() {
@@ -113,6 +132,10 @@ public class MACPacket {
 
 	public byte[] getPayload() {
 		return payload;
+	}
+	
+	public int getPayloadSize() {
+		return payload.length;
 	}
 
 	/**
@@ -172,6 +195,15 @@ public class MACPacket {
 	public void setReceived(boolean isReceived) {
 		this.isReceived = isReceived;
 	}
+	
+	public int getLinkMetric() {
+		return linkMetric;
+	}
+
+	public void setLinkMetric(int linkMetric) {
+		this.linkMetric = linkMetric;
+	}
+	
 	
 	/**
 	 * Returns a FlowLabel, if there is one existing in the payload

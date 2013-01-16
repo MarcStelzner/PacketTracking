@@ -23,8 +23,8 @@ public class WriteParser {
 		byte[] outputArray = new byte[0];
 		byte[] oldOutputArray;
 		
-		System.out.println("--- Going to print Pcap-File ---");
-		System.out.println("Start writing Pcap Header...");
+		System.out.println("--- Starting to print Pcap-File ---");
+		System.out.println("Start writing Pcap Header ...");
 		//Create a PCAP Header:
 		// 1. Magic Number 		a1b2c3d4	(right order of bytes)
 		// 2. Major Version 	0002		(actual version number)
@@ -40,20 +40,22 @@ public class WriteParser {
 				(byte)0x00, (byte)0x00, (byte)0xff, (byte)0xff, 
 				(byte)0x00, (byte)0x00, (byte)0x00, (byte)0xe6};
 		
-		System.out.println("Pcap header done. \nStart collecting "+packets.size()+" packets...");
+		System.out.println("Pcap header done. \nStart collecting "+packets.size()+" packets ...");
 		
 		oldOutputArray = pcapArray;
 		outputArray = pcapArray;
 		
 		//write all packets to an array
 		for(int i = 0; i<packets.size();i++){
-			System.out.println("Collect packet #"+i+"...");
+//			System.out.println("Collect packet #"+i+"...");
 			outputArray = new byte[oldOutputArray.length+packets.get(i).toBytes().length];
 			System.arraycopy(oldOutputArray, 0, outputArray, 0, oldOutputArray.length);
 			System.arraycopy(packets.get(i).toBytes(), 0, outputArray, oldOutputArray.length, packets.get(i).toBytes().length);
 			oldOutputArray = outputArray;
-			System.out.println("Packet #"+i+" done.");
+//			System.out.println("Packet #"+i+" done.");
 		}
+		
+		System.out.println("All Packets ready to be saved.");
 		
 		//Open Dialog to save file
 		FileDialog fd = new FileDialog(new Frame(), "Choose file to save converted Datalog.", FileDialog.SAVE);
@@ -65,20 +67,19 @@ public class WriteParser {
 	    //Check for existence of the given address
 	    if(!(fd.getFile() == null)){
 	    	String address = fd.getDirectory() + fd.getFile();//System.getProperty("file.separator") + fd.getFile();
-		    System.out.println(address);
 	    	//check ending of file (to be .pcap), otherwise fix it
 		    if(!address.endsWith(".pcap")){
 		    	address += ".pcap";
 		    }
 		    
-			System.out.println("All packets are done, writing to file "+ address + " ...");
+			System.out.println("Writing to file "+ address + " ...");
 
 			//try to save at given address
 			try{
 				FileOutputStream output = new FileOutputStream(address);
 				output.write(outputArray);
 				fd.dispose();
-				System.out.println("Data saved in "+ address);
+				System.out.println("Data to "+ address + " is succesfully saved.");
 				System.out.println("Work done, terminating ...");
 			} catch(Exception e){
 				System.out.print("Error on saving: " + e);

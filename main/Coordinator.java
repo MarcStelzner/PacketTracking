@@ -1,5 +1,4 @@
 package packettracking.main;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 import packettracking.objects.Node;
@@ -21,11 +20,44 @@ public class Coordinator {
 		reader.readData();
 		ArrayList<MACPacket> packets = reader.getPackets();
 		ArrayList<Node> nodes = reader.getNodes();
+		//maybe an additional backup-save before getting the streams ?
+		
+//print all nodes with size of received and sent packets
+		
+//		for(Node n : nodes){
+//			System.out.println("Node with received " + n.getReceivedPackets().size() +" packets and sent "+ n.getSentPackets().size() +" at Address:");
+//			for (byte b : n.getNodeId()) {
+//				System.out.format("0x%x ", b);
+//			}
+//			System.out.println("\n");
+//		}	
+
+//print all received messages for node 1
+		
+//		for(Node n : nodes){
+//			if(Arrays.equals(n.getNodeId(),new byte[]{0,1})){
+//				System.out.println("Received packets: ");
+//				for(MACPacket p : n.getReceivedPackets()){
+//					for (byte b : p.toBytes()) {
+//						System.out.format("0x%x ", b);
+//					}
+//					System.out.println("\n ");
+//				}
+//				System.out.println("Sent packets: ");
+//				for(MACPacket p : n.getSentPackets()){
+//					for (byte b : p.toBytes()) {
+//						System.out.format("0x%x ", b);
+//					}
+//					System.out.println("\n ");
+//				}
+//			}
+//		}
+		
 		
 		//now we have a (chronological) list of packets and nodes
 		
-		//check for existance of packets and nodes in the read-in stuff
-		if(packets.isEmpty() || nodes.isEmpty()){
+		//check for existance of packets in the read-in stuff
+		if(packets.isEmpty()){
 			System.out.println("Nothing to read, terminating...");
 			//terminate with no packets
 			System.exit(1);
@@ -82,42 +114,25 @@ public class Coordinator {
 		ArrayList<MultihopPacketTrace> streams = getStreams(packets);
 		
 		System.out.println("////////////////////////////////////////////////////////");
-		System.out.println("Anzahl an Streams: " + streams.size());
+		System.out.println("Number of Nodes: " + nodes.size());
+		System.out.println("Number of Packets: " + packets.size());
+		System.out.println("Number of Streams: " + streams.size());
 		System.out.println("////////////////////////////////////////////////////////");		
 		
-		//TODO: sort streams ?!? ---> at least find out the source and the destination
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
 
-		// What can (easily) be done:
-		// - get all packets in a specific time-interval 
-		//		---> just go through packetlist till first packet in timeinterval is found and then till last packet still in interval is found
-		// - get all packets sent/received by a node / group of nodes 
-		//		---> just from the nodelist
-		
-		
 		// TODO:
 		// - get whole packet transfer between two nodes (on mac-level and on "flow label/datagram tag"-6lowpan-level)
-		
-
-		
-		
+		// 		---> TODO: sort streams ?!? ---> at least find out the source and the destination
 		
 		//at last, make it optional to print the Data to a pcap-File
 		WriteParser writer = new WriteParser(); 
 		writer.printPcapFile(packets);
 		System.exit(1);
 	}
+	
+	
+	
+	
 
 	
 	private ArrayList<MultihopPacketTrace> getStreams(ArrayList<MACPacket> packets){
@@ -167,8 +182,17 @@ public class Coordinator {
 			}
 			//no flow label or fragmentation tag? just add to ordinary stream with 1 to 2 packets each
 			else{
-				//... TODO: do some stuff for packets with no flow label and no fragmentation header to at least bring two packets together
-				
+				boolean found = false;
+				for(MultihopPacketTrace s : streams){   //TODO: BIG TODO, open wound here ... no concentrating possible
+					//... TODO: do some stuff for packets with no flow label and no fragmentation header to at least bring two packets together
+					if(p.getDestinationNode().equals(s.getDestinationNode())
+							&& p.getSourceNode().equals(s.getSourceNode())
+							&& !(byteArrayToInt(4,p.getSeconds()) > (byteArrayToInt(4,s.getSeconds())+timeBetweenStreams))
+							&& !((byteArrayToInt(4,p.getSeconds())+timeBetweenStreams) < byteArrayToInt(4,s.getSeconds()))){
+						
+					}
+				}
+				//TODO: use milliseconds !
 			}
 		}
 		
@@ -185,7 +209,8 @@ public class Coordinator {
 						for(MACPacket sp : s.getPacketList()){
 							int streamPacketTag = sp.getFragmentationTag();
 							//if tag, sender, receiver, datagramsize, datagram tag and approximately the time matches it's okay
-							//TODO: maybe also check payload ?
+							//TODO: possible problem: on multihop it won't work with one of first fragment missing, all other fragments on this hop are unconnected
+							//           ---> but it's not easy anyway with first fragment missing, after IP-Hop -> new tag, only mesh-under could be solved
 							if(streamPacketTag == checkLaterTag && p.getDestinationNode().equals(sp.getDestinationNode())
 									&& p.getSourceNode().equals(sp.getSourceNode()) && p.getFragmentationSize() == sp.getFragmentationSize()
 									&& !(byteArrayToInt(4,p.getSeconds()) > (byteArrayToInt(4,sp.getSeconds())+timeBetweenStreams))

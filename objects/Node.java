@@ -8,9 +8,21 @@ public class Node {
 	private ArrayList<MACPacket> sentPackets;
 	private ArrayList<MACPacket> receivedPackets;
 	
-	
-	
+	//Coordinates of the Node, TODO: Maybe as a vector ?
+	double x;
+	double y;
+	double z;
+
 	public Node(byte[] nodeId){
+		this.nodeId = nodeId;
+		this.sentPackets = new ArrayList<MACPacket>();
+		this.receivedPackets = new ArrayList<MACPacket>();
+	}
+	
+	public Node(byte[] nodeId, double x, double y, double z){
+		this.x = x;
+		this.y = y;
+		this.z = z;
 		this.nodeId = nodeId;
 		this.sentPackets = new ArrayList<MACPacket>();
 		this.receivedPackets = new ArrayList<MACPacket>();
@@ -46,5 +58,23 @@ public class Node {
 
 	public void addReceivedPackets(MACPacket receivedPacket){
 		this.receivedPackets.add(receivedPacket);
+	}
+	
+	public void setCoords(double x, double y, double z) {
+		this.x = x;
+		this.y = y;
+		this.z = z;
+	}
+	
+	public double getX() {
+		return x;
+	}
+
+	public double getY() {
+		return y;
+	}
+
+	public double getZ() {
+		return z;
 	}
 }
