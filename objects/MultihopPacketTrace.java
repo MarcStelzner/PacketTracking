@@ -19,17 +19,17 @@ public class MultihopPacketTrace {
 
 	//the time interval of the stream (from first- to lastTime)
 	private int firstTime;
-	private int firstTimeMicroseconds;
+	private int firstTimeMilliseconds;
 	private int lastTime;
-	private int lastTimeMicroseconds;
+	private int lastTimeMilliseconds;
 	
 	//TODO: maybe useful as a reference
 	private final UUID uuid;
 	
 	//TODO: which ones of the three are useful ? ---> or other plan to build a path ?
 	private Node source;
-	private Node[] intermediateNodes; // the nodes between the source and the destinations
-	private Node[] destination; //plural, because of (broadcasts, multicasts)
+	private ArrayList<Node> intermediateNodes; // the nodes between the source and the destinations
+	private Node destination; //plural, because of (broadcasts, multicasts)
 
 	/**
 	 * A Constructor for Messages with a FlowLabel
@@ -50,9 +50,9 @@ public class MultihopPacketTrace {
 		
 		// no time, because no packet yet
 		firstTime = -1;
-		firstTimeMicroseconds = -1;
+		firstTimeMilliseconds = -1;
 		lastTime = -1; 
-		lastTimeMicroseconds = -1;
+		lastTimeMilliseconds = -1;
 		
 		uuid  = UUID.randomUUID();
 	}
@@ -76,9 +76,9 @@ public class MultihopPacketTrace {
 		
 		// no time, because no packet yet
 		firstTime = -1;
-		firstTimeMicroseconds = -1;
+		firstTimeMilliseconds = -1;
 		lastTime = -1; 
-		lastTimeMicroseconds = -1;
+		lastTimeMilliseconds = -1;
 		
 		uuid  = UUID.randomUUID();
 	}
@@ -90,22 +90,95 @@ public class MultihopPacketTrace {
 	public int getFlowLabel() {
 		return flowLabel;
 	}
+	
+	/**
+	 * Returns the first 10 bit of the Flow Label, the hashed NodeID
+	 * 
+	 * @return nodeId
+	 */
+	public int getFlowLabelId(){
+		int flowLabel = getFlowLabel();
+		if(flowLabel >= 0){
+			//masking 00000000000011111111110000000000 
+			//shift them 10 bits to the right:
+			return flowLabel >> 10;
+		} else {
+			return -1;
+		}	
+	}
+	
+	/**
+	 * Returns the last 10 bit of the Flow Label, the Messagecounter
+	 * 
+	 * @return counter
+	 */
+	public int getFlowLabelCount(){
+		int flowLabel = getFlowLabel();
+		if(flowLabel >= 0){
+			// masking 00000000000000000000001111111111 
+			// get the last ten bits by modulo operation
+			return (flowLabel % 1024);
+		} else {
+			return -1;
+		}	
+	}
 
 	public int getFirstTime() {
 		return firstTime;
 	}
 	
-	public int getFirstTimeMicroseconds() {
-		return firstTimeMicroseconds;
+//	public void setFirstTime(int firstTime) {
+//		this.firstTime = firstTime;
+//	}
+	
+	public int getFirstTimeMilliseconds() {
+		return firstTimeMilliseconds;
 	}
+	
+//	public void setFirstTimeMilliseconds(int firstTimeMilliseconds) {
+//		this.firstTimeMilliseconds = firstTimeMilliseconds;
+//	}
 
 	public int getLastTime() {
 		return lastTime;
 	}
 	
-	public int getLastTimeMicroseconds() {
-		return lastTimeMicroseconds;
+//	public void setLastTime(int lastTime) {
+//		this.lastTime = lastTime;
+//	}
+	
+	public int getLastTimeMilliseconds() {
+		return lastTimeMilliseconds;
 	}
+	
+//	public void setLastTimeMilliseconds(int lastTimeMilliseconds) {
+//		this.lastTimeMilliseconds = lastTimeMilliseconds;
+//	}
+	
+	public Node getSource(){
+		return source;
+	}
+	
+	public void setSource(Node source){
+		this.source = source;
+	}
+	
+	public ArrayList<Node> getIntermediateNodes(){
+		return intermediateNodes;
+	}
+	
+	public void setIntermediateNodes(ArrayList<Node>  intermediateNodes){
+		this.intermediateNodes = intermediateNodes;
+	}
+	
+	public Node getDestination(){
+		return destination;
+	}
+	
+	public void setDestination(Node destination){
+		this.destination = destination;
+	}
+
 	
 	public UUID getUuid() {
 		return uuid;
@@ -121,20 +194,20 @@ public class MultihopPacketTrace {
 	 */
 	public void addPacket(MACPacket packet){
 		int packetSeconds = byteArrayToInt(4, packet.getSeconds());
-		int packetMicroSeconds = byteArrayToInt(4, packet.getMicroSeconds());
+		int packetMilliSeconds = byteArrayToInt(4, packet.getMilliSeconds());
 		
 		//if there is no first time or the new first Time is earlier, than renew it
 		if(firstTime < 0 || firstTime > packetSeconds 
-				|| ((firstTime == packetSeconds)&&(firstTimeMicroseconds > packetMicroSeconds))){
+				|| ((firstTime == packetSeconds)&&(firstTimeMilliseconds > packetMilliSeconds))){
 			firstTime = packetSeconds;
-			firstTimeMicroseconds = packetMicroSeconds;
+			firstTimeMilliseconds = packetMilliSeconds;
 		}
 		
 		//if there is no last time or the new first Time is earlier, than renew it
 		if(lastTime < packetSeconds 
-				|| ((lastTime == packetSeconds)&&(lastTime < packetMicroSeconds))){
+				|| ((lastTime == packetSeconds)&&(lastTime < packetMilliSeconds))){
 			lastTime = packetSeconds;
-			lastTimeMicroseconds = packetMicroSeconds;
+			lastTimeMilliseconds = packetMilliSeconds;
 		}
 		
 		//at last, add fragmentation tag to the list if there's (a new) one 
@@ -161,6 +234,27 @@ public class MultihopPacketTrace {
 
 	public ArrayList<Integer> getFragmentationTags() {
 		return fragmentationTags;
+	}
+	
+	public String toString(){
+		String traceToString = "Packet trace startet at a time of " + firstTime + " and ended at a time of " + lastTime + ".\n" 
+							+ "It has the flowlabel "+flowLabel+ ".\n"
+							+ "The trace's originator: "
+							+ source.toString() +"\n"
+							+ "The final destination of the trace was: "
+							+ destination.toString() +"\n"
+							+ "The "+intermediateNodes.size()+" intermediate nodes on the way are the following: \n";
+		for(Node n : intermediateNodes){
+			traceToString += n.toString() + "\n";
+		}
+		traceToString += "The trace consists of the following "+packetList.size()+" packet(s): \n";
+		for(MACPacket p : packetList){
+			traceToString += p.toString();
+		}
+		traceToString += "That was all information of this trace.";
+		
+		
+		return traceToString;
 	}
 	
 	/**

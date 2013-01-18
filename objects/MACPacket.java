@@ -1,5 +1,5 @@
 package packettracking.objects;
-public class MACPacket {
+public class MACPacket  implements Comparable<MACPacket>{
 	
 	//boolean to tell if the packet eventually has additional protocol-information
 	private boolean protocols;
@@ -115,20 +115,20 @@ public class MACPacket {
 		this.destinationNode = destinationNode;
 	}
 	
-	/**
-	 * The "According Node" is the node, where the packet belongs to.
-	 * If the logged packet is from the Receiver, it is the Destination,
-	 * else if it is logged at the sender, the "According Node" is the Source
-	 * @return
-	 */
-	public Node getAccordingNode() {
-		if(isReceived){
-			return destinationNode;
-		}
-		else {
-			return sourceNode;
-		}
-	}
+//	/**
+//	 * The "According Node" is the node, where the packet belongs to.
+//	 * If the logged packet is from the Receiver, it is the Destination,
+//	 * else if it is logged at the sender, the "According Node" is the Source
+//	 * @return
+//	 */
+//	public Node getAccordingNode() {
+//		if(isReceived){
+//			return destinationNode;
+//		}
+//		else {
+//			return sourceNode;
+//		}
+//	}
 
 	public byte[] getPayload() {
 		return payload;
@@ -217,38 +217,7 @@ public class MACPacket {
 			return -1;
 		}
 	}
-	
-	/**
-	 * Returns the first 10 bit of the Flow Label, the hashed NodeID
-	 * 
-	 * @return nodeId
-	 */
-	public int getFlowLabelId(){
-		int flowLabel = getFlowLabel();
-		if(flowLabel >= 0){
-			//masking 00000000000011111111110000000000 
-			//it is done by subtracting the last 10 bits from the first (12 empty highest bits are ignored):
-			return (flowLabel - (flowLabel % 1024));
-		} else {
-			return -1;
-		}	
-	}
-	
-	/**
-	 * Returns the last 10 bit of the Flow Label, the Messagecounter
-	 * 
-	 * @return counter
-	 */
-	public int getFlowLabelCount(){
-		int flowLabel = getFlowLabel();
-		if(flowLabel >= 0){
-			// masking 00000000000000000000001111111111 
-			// get the last ten bits by modulo operation
-			return (flowLabel % 1024);
-		} else {
-			return -1;
-		}	
-	}
+
 
 	/**
 	 * Returns a FragmentationTag, if there is one existing in the payload
@@ -271,8 +240,58 @@ public class MACPacket {
 		this.accordingStream = accordingStream;
 	}
 	
+	@Override
+	public int compareTo(MACPacket p)
+	{
+		int seconds = 0;
+		int pSeconds = 0;
+		int milliSeconds = 0;
+		int pMilliSeconds = 0;
+		int microSeconds = 0;
+		int pMicroSeconds = 0;
+		
+		for(int i = 0 ; i < 4 ; i++){
+			seconds += (this.seconds[i] << ((4-1-i)*8)) & 0xFF;
+		}
+		for(int i = 0 ; i < 4 ; i++){
+			pSeconds += (p.getSeconds()[i] << ((4-1-i)*8)) & 0xFF;
+		}
+		for(int i = 0 ; i < 4 ; i++){
+			milliSeconds += (this.milliSeconds[i] << ((4-1-i)*8)) & 0xFF;
+		}
+		for(int i = 0 ; i < 4 ; i++){
+			pMilliSeconds += (p.getMilliSeconds()[i] << ((4-1-i)*8)) & 0xFF;
+		}
+		for(int i = 0 ; i < 4 ; i++){
+			microSeconds += (this.microSeconds[i] << ((4-1-i)*8)) & 0xFF;
+		}
+		for(int i = 0 ; i < 4 ; i++){
+			pMicroSeconds += (p.getMicroSeconds()[i] << ((4-1-i)*8)) & 0xFF;
+		}
+		
+		//get all seconds into one time of long and after subtraction back to int
+		long time = (seconds*1000)*1000 + milliSeconds*1000 + microSeconds;
+		long pTime = (pSeconds*1000)*1000 + pMilliSeconds*1000 + pMicroSeconds;
+		time = time -pTime;
+		int intTime = (int)time;
+		
+	    return intTime;
+	}
+	
 	public String toString(){
-		return "";
+		String packetToString = "Packet from " + sourceNode.toString() +"\n"
+									+ "        was sent to " + destinationNode.toString() +"\n"
+									+ "        and logged at " + loggingNode.toString() +"\n"
+									+ "        at a time of " + byteArrayToInt(4,seconds)+"."
+									+ "        It has a size of " + getPayloadSize() +". \n";
+		if(sixLoWPANpacket != null){
+			packetToString += " The packet contains additional6LoWPAN information: \n" +
+					"        FlowLabel: "+getFlowLabel()+", Fragmentation Tag: "+getFragmentationTag()+" \n";
+		} else {
+			packetToString += "\n";
+		}
+		
+		return packetToString;
 	}
 	
 	public byte[] toBytes(){ 
@@ -314,5 +333,26 @@ public class MACPacket {
 //		}  
 	
 		return output;
+	}
+	
+	/**
+	 * This Method turns bytearrays of a maximum length of 4 into integer
+	 * 
+	 * @param length
+	 * @param array
+	 * @return
+	 */
+	private int byteArrayToInt(int length, byte[] array){
+		int newInt = 0;
+		if(length > 4){
+			System.out.println("Bytearray is too large with a size of "+length+". Only a length of 4 is possible (32 bit for int). Last "+(length-4)+" bytes will be ignored." );
+			length = 4;
+		}
+		else{
+			for(int i = 0 ; i < length ; i++){
+				newInt += (array[i] << ((length-1-i)*8)) & 0xFF;
+			}
+		}
+		return newInt;
 	}
 }
