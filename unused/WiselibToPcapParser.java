@@ -2,13 +2,9 @@ package packettracking.unused;
 
 import packettracking.objects.MACPacket;
 
-import java.awt.FileDialog;
-import java.awt.Frame;
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.nio.ByteBuffer;
+
 import java.util.ArrayList;
 
 public class WiselibToPcapParser {

@@ -3,6 +3,8 @@ package packettracking.objects;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import packettracking.support.Calculator;
+
 public class MultihopPacketTrace {
 	
 	//The list of packets in the stream, it should be hold chronological
@@ -193,8 +195,8 @@ public class MultihopPacketTrace {
 	 * @param packet
 	 */
 	public void addPacket(MACPacket packet){
-		int packetSeconds = byteArrayToInt(4, packet.getSeconds());
-		int packetMilliSeconds = byteArrayToInt(4, packet.getMilliSeconds());
+		int packetSeconds = Calculator.byteArrayToInt(packet.getSeconds());
+		int packetMilliSeconds = Calculator.byteArrayToInt(packet.getMilliSeconds());
 		
 		//if there is no first time or the new first Time is earlier, than renew it
 		if(firstTime < 0 || firstTime > packetSeconds 
@@ -255,26 +257,5 @@ public class MultihopPacketTrace {
 		
 		
 		return traceToString;
-	}
-	
-	/**
-	 * This Method turns bytearrays of a maximum length of 4 into integer
-	 * 
-	 * @param length
-	 * @param array
-	 * @return
-	 */
-	private int byteArrayToInt(int length, byte[] array){
-		int newInt = 0;
-		if(length > 4){
-			System.out.println("Bytearray is too large with a size of "+length+". Only a length of 4 is possible (32 bit for int). Last "+(length-4)+" bytes will be ignored." );
-			length = 4;
-		}
-		else{
-			for(int i = 0 ; i < length ; i++){
-				newInt += (array[i] << ((length-1-i)*8)) & 0xFF;
-			}
-		}
-		return newInt;
 	}
 }

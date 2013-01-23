@@ -1,6 +1,9 @@
 package packettracking.objects;
 
+import java.math.BigInteger;
 import java.util.Arrays;
+
+import packettracking.support.Calculator;
 
 /**
  * This class is designed to give additional information about 6LoWPAN packets,
@@ -32,28 +35,27 @@ public class SixLoWPANpacket {
 	//iphc header
 	boolean iphcHeader = false;
 	int tf; //Traffic Class and Flow Label (0 = 4 bytes, 1 = 3 bytes, 2 = 1 byte, 0 = bytes after header)
-	boolean nh; //next header --- //TODO: set, but ignored at the moment
-	int hlim; //hop limit --- //TODO: set, but ignored at the moment
-	boolean cid; //context identifier extension --- //TODO: set, but ignored at the moment
-	boolean sac; //source address compression --- //TODO: set, but ignored at the moment
-	int sam; //source address mode --- //TODO: set, but ignored at the moment
-	boolean m; // multicast address (1 = true) --- //TODO: set, but ignored at the moment
-	boolean dac; //destination address compression --- //TODO: set, but ignored at the moment
-	int dam; //destination address mode --- //TODO: set, but ignored at the moment
+	boolean nh; //next header (0 = carried inline, 1 = encoded in NHC (if theres any))
+	int hlim; //hop limit (0 = carried inline, 1 = 1, 2 = 64, 3 = 255)
+	boolean cid; //context identifier extension (0 = additional context information, 1 = elided)
+	boolean sac; //source address compression
+	int sam; //source address mode
+	boolean m; // multicast address (0 = no multicast, 1 = destination address is multicast)
+	boolean dac; //destination address compression 
+	int dam; //destination address mode
 	
 	//iphc fields
 	int ecn; //explicit congestion notification
 	int dscp; //differentiated service point
 	int flowLabel;
-	
-	
-	//TODO:every other field not set
-	
+	int nextHeader;
+	int hopLimit;
+	int contextIdentifierExtension;
+	BigInteger source;
+	BigInteger destination;
 	
 	//the rest is payload
 	byte[] payload;
-	
-	
 	
 	public SixLoWPANpacket(byte[] packet){
 		createPacket(packet);
@@ -107,7 +109,7 @@ public class SixLoWPANpacket {
 			payload = packet;
 		}
 		
-		//TODO: Now this payload could be passed to IPv6 Header
+		//TODO: Now this payload could be passed to ICMPv6/UDP Header
 	}
 	
 	private byte[] createMeshAddressingHeader(byte[] packet){
@@ -137,23 +139,24 @@ public class SixLoWPANpacket {
 		
 		//get orginatorAddress
 		if(vFlag){
-			originatorAddress = byteArrayToLong(2,Arrays.copyOfRange(packet, packetPosition, packetPosition+2));
+			originatorAddress = Calculator.byteArrayToLong(Arrays.copyOfRange(packet, packetPosition, packetPosition+2));
 			packetPosition += 2;
 		} else {
-			originatorAddress = byteArrayToLong(8,Arrays.copyOfRange(packet, packetPosition, packetPosition+8));
+			originatorAddress = Calculator.byteArrayToLong(Arrays.copyOfRange(packet, packetPosition, packetPosition+8));
 			packetPosition += 8;
 		}
 		
 		//get finalAddress
 		if(fFlag){
-			finalAddress = byteArrayToLong(2,Arrays.copyOfRange(packet, packetPosition, packetPosition+2));
+			finalAddress = Calculator.byteArrayToLong(Arrays.copyOfRange(packet, packetPosition, packetPosition+2));
 			packetPosition += 2;
 		} else {
-			finalAddress = byteArrayToLong(8,Arrays.copyOfRange(packet, packetPosition, packetPosition+8));
+			finalAddress = Calculator.byteArrayToLong(Arrays.copyOfRange(packet, packetPosition, packetPosition+8));
 			packetPosition += 8;
 		}
 		
 		headerSize += packetPosition;
+		//return the remaining payload
 		return Arrays.copyOfRange(packet, packetPosition, packet.length);
 	}
 	
@@ -167,10 +170,11 @@ public class SixLoWPANpacket {
 		int packetPosition = 0;
 		
 		//get the datagramOffset
-		datagramOffset = byteArrayToInt(2,Arrays.copyOfRange(packet, packetPosition, packetPosition+2));
+		datagramOffset = Calculator.byteArrayToInt(Arrays.copyOfRange(packet, packetPosition, packetPosition+2));
 		packetPosition+=2;
 		
 		headerSize += packetPosition;	
+		//return the remaining payload
 		return Arrays.copyOfRange(packet, packetPosition, packet.length);
 	}
 	
@@ -190,10 +194,11 @@ public class SixLoWPANpacket {
 		packetPosition+=2;
 		
 		//get the datagramTag
-		datagramTag = byteArrayToInt(2,Arrays.copyOfRange(packet, packetPosition, packetPosition+2));
+		datagramTag = Calculator.byteArrayToInt(Arrays.copyOfRange(packet, packetPosition, packetPosition+2));
 		packetPosition+=2;
 		
 		headerSize += packetPosition;	
+		//return the remaining payload
 		return Arrays.copyOfRange(packet, packetPosition, packet.length);
 	}
 	
@@ -303,31 +308,107 @@ public class SixLoWPANpacket {
 		} //or else there is nothing with tf == 3
 		
 		
-		//TODO: everything else than FlowLabel (nh, hlim, cid, sac, sam, m, dac, dam
-	
+		//now check for nh, if 0, 8 bits carried inline
+		if(!nh){
+			nextHeader = packet[packetPosition] & 0xFF; 
+			packetPosition++;
+		}
+		
+		//check for hop limit
+		if(hlim == 0){ //inline
+			hopLimit = packet[packetPosition] & 0xFF; 
+			packetPosition++;
+		} else if(hlim == 1) { //1
+			hopLimit = 1;
+		} else if(hlim == 2) { //64
+			hopLimit = 64;
+		} else { //hlim = 3 --> 255
+			hopLimit = 255;
+		}
+		
+		//check source address
+		if(!sac){ //stateless compression
+			if(sam == 0){ //128 bits
+				source = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+16)); 
+				packetPosition += 16;
+			} else if (sam == 1){ //64 bits
+				source = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+8)); 
+				packetPosition += 8;
+			} else if (sam == 2){ //16 bits
+				source = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+2)); 
+				packetPosition += 2;
+			} //else sam == 3 --> 0 bits
+		} else { //statefull compression
+			if(sam == 0){
+				//"unspecified address"
+			} else if (sam == 1){ //64 bits
+				source = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+8)); 
+				packetPosition += 8;
+			} else if (sam == 2){ //16 bits
+				source = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+2)); 
+				packetPosition += 2;
+			} //else sam == 3 --> 0 bits		
+		}
+		
+		if(!m){ //no multicast
+			if(!dac){ //stateless compression
+				if(dam == 0){ //128 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+16)); 
+					packetPosition += 16;
+				} else if (dam == 1){ //64 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+8)); 
+					packetPosition += 8;
+				} else if (dam == 2){ //16 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+2)); 
+					packetPosition += 2;
+				} //else dam == 3 --> 0 bits
+			} else { //statefull compression
+				if(dam == 0){ 
+					//"reserved"
+				} else if (dam == 1){ //64 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+8)); 
+					packetPosition += 8;
+				} else if (dam == 2){ //16 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+2)); 
+					packetPosition += 2;
+				} //else dam == 3 --> 0 bits	
+			}
+		} else { //destination is multicast
+			if(!dac){ //stateless compression
+				if(dam == 0){ //128 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+16)); 
+					packetPosition += 16;
+				} else if (dam == 1){ //48 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+6)); 
+					packetPosition += 6;
+				} else if (dam == 2){ //32 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+4)); 
+					packetPosition += 4;
+				} else {//dam == 3 --> 8 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+1)); 
+					packetPosition ++;
+				}
+			} else { //statefull compression
+				if(dam == 0){ //48 bits
+					destination = Calculator.byteArrayToBigInteger(Arrays.copyOfRange(packet, packetPosition, packetPosition+6)); 
+					packetPosition += 6;
+				} //else dam = 1/2/3 --> reserved	
+			}
+		}
+		
+		//check for Context Identifier Extension
+		if(!cid){
+			contextIdentifierExtension = packet[packetPosition] & 0xFF; 
+			packetPosition++;
+			//additional context for source and destination
+		}
+		
+		//TODO: NHC if there is any
 		
 		headerSize += packetPosition;
+		//return the remaining payload
 		return Arrays.copyOfRange(packet, packetPosition, packet.length);
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	public int getHeaderSize() {
 		return headerSize;
@@ -427,59 +508,5 @@ public class SixLoWPANpacket {
 
 	public int getFlowLabel() {
 		return flowLabel;
-	}
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	/**
-	 * This Method turns bytearrays of a maximum length of 4 into integer
-	 * 
-	 * @param length
-	 * @param array
-	 * @return
-	 */
-	private int byteArrayToInt(int length, byte[] array){
-		int newInt = 0;
-		if(length > 4){
-			System.out.println("Bytearray is too large with a size of "+length+". Only a length of 4 is possible (32 bit for int). Last "+(length-4)+" bytes will be ignored." );
-			length = 4;
-		}
-		else{
-			for(int i = 0 ; i < length ; i++){
-				newInt += (array[i] << ((length-1-i)*8)) & 0xFF;
-			}
-		}
-		return newInt;
-	}
-	
-	/**
-	 * This Method turns bytearrays of a maximum length of 8 into long
-	 * 
-	 * @param length
-	 * @param array
-	 * @return
-	 */
-	private long byteArrayToLong(int length, byte[] array){
-		long newLong = 0;
-		if(length > 4){
-			System.out.println("Bytearray is too large with a size of "+length+". Only a length of 8 is possible (64 bit for int). Last "+(length-4)+" bytes will be ignored." );
-			length = 4;
-		}
-		else{
-			for(int i = 0 ; i < length ; i++){
-				newLong += (array[i] << ((length-1-i)*8)) & 0xFF;
-			}
-		}
-		return newLong;
 	}
 }

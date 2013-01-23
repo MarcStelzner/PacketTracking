@@ -1,4 +1,7 @@
 package packettracking.objects;
+
+import packettracking.support.Calculator;
+
 public class MACPacket  implements Comparable<MACPacket>{
 	
 	//boolean to tell if the packet eventually has additional protocol-information
@@ -282,7 +285,7 @@ public class MACPacket  implements Comparable<MACPacket>{
 		String packetToString = "Packet from " + sourceNode.toString() +"\n"
 									+ "        was sent to " + destinationNode.toString() +"\n"
 									+ "        and logged at " + loggingNode.toString() +"\n"
-									+ "        at a time of " + byteArrayToInt(4,seconds)+"."
+									+ "        at a time of " + Calculator.byteArrayToInt(seconds)+"."
 									+ "        It has a size of " + getPayloadSize() +". \n";
 		if(sixLoWPANpacket != null){
 			packetToString += " The packet contains additional6LoWPAN information: \n" +
@@ -333,26 +336,5 @@ public class MACPacket  implements Comparable<MACPacket>{
 //		}  
 	
 		return output;
-	}
-	
-	/**
-	 * This Method turns bytearrays of a maximum length of 4 into integer
-	 * 
-	 * @param length
-	 * @param array
-	 * @return
-	 */
-	private int byteArrayToInt(int length, byte[] array){
-		int newInt = 0;
-		if(length > 4){
-			System.out.println("Bytearray is too large with a size of "+length+". Only a length of 4 is possible (32 bit for int). Last "+(length-4)+" bytes will be ignored." );
-			length = 4;
-		}
-		else{
-			for(int i = 0 ; i < length ; i++){
-				newInt += (array[i] << ((length-1-i)*8)) & 0xFF;
-			}
-		}
-		return newInt;
 	}
 }

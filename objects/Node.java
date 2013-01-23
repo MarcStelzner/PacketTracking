@@ -2,7 +2,12 @@ package packettracking.objects;
 
 import java.util.ArrayList;
 
+import packettracking.support.Calculator;
+
 public class Node {
+	
+	//TODO: Maybe use a property file
+	private static final int BROADCAST_SHORT = 65535;
 
 	private byte[] nodeId; //TODO: is not really address-enough
 	private ArrayList<MACPacket> sentPackets;
@@ -104,57 +109,22 @@ public class Node {
 		this.tracesByDestination.add(traceByDestination);
 	}
 	
-	public String toString(){
+	public String toString(){ 
+		boolean broadcastNode = false;
 		String nodeToString = "Node ";
 		if(nodeId.length > 2){
-			nodeToString += byteArrayToLong(8, nodeId);
+			nodeToString += Calculator.byteArrayToLong(nodeId);
 		} else {
-			nodeToString += byteArrayToInt(2, nodeId);
+			if(BROADCAST_SHORT == Calculator.byteArrayToInt(nodeId)){
+				broadcastNode = true;
+			}
+			nodeToString += Calculator.byteArrayToInt(nodeId);
 		}
 		nodeToString += " at the coordinates "+x+" , "+y+" , "+z+" ";
+		if(broadcastNode){
+			nodeToString = "Broadcast";
+		}
 		
 		return nodeToString;
-	}
-	
-	/**
-	 * This Method turns bytearrays of a maximum length of 4 into integer
-	 * 
-	 * @param length
-	 * @param array
-	 * @return
-	 */
-	private int byteArrayToInt(int length, byte[] array){
-		int newInt = 0;
-		if(length > 4){
-			System.out.println("Bytearray is too large with a size of "+length+". Only a length of 4 is possible (32 bit for int). Last "+(length-4)+" bytes will be ignored." );
-			length = 4;
-		}
-		else{
-			for(int i = 0 ; i < length ; i++){
-				newInt += (array[i] << ((length-1-i)*8)) & 0xFF;
-			}
-		}
-		return newInt;
-	}
-	
-	/**
-	 * This Method turns bytearrays of a maximum length of 8 into long
-	 * 
-	 * @param length
-	 * @param array
-	 * @return
-	 */
-	private long byteArrayToLong(int length, byte[] array){
-		long newLong = 0;
-		if(length > 4){
-			System.out.println("Bytearray is too large with a size of "+length+". Only a length of 8 is possible (64 bit for int). Last "+(length-4)+" bytes will be ignored." );
-			length = 4;
-		}
-		else{
-			for(int i = 0 ; i < length ; i++){
-				newLong += (array[i] << ((length-1-i)*8)) & 0xFF;
-			}
-		}
-		return newLong;
 	}
 }
