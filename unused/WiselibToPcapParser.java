@@ -1,6 +1,6 @@
 package packettracking.unused;
 
-import packettracking.objects.MACPacket;
+import packettracking.model.MACPacket;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;

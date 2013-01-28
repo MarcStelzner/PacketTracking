@@ -3,9 +3,6 @@ package packettracking.testing;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -13,17 +10,12 @@ import java.util.Arrays;
 import java.util.Calendar;
 
 import org.jgrapht.DirectedGraph;
-import org.jgrapht.VertexFactory;
 import org.jgrapht.ext.DOTExporter;
-import org.jgrapht.ext.EdgeNameProvider;
 import org.jgrapht.ext.VertexNameProvider;
-import org.jgrapht.generate.RandomGraphGenerator;
-import org.jgrapht.graph.ClassBasedVertexFactory;
 import org.jgrapht.graph.DefaultDirectedGraph;
-import org.jgrapht.graph.DefaultEdge;
 
-import packettracking.objects.Node;
-import packettracking.objects.MACPacket;
+import packettracking.model.MACPacket;
+import packettracking.model.Node;
 import packettracking.support.Calculator;
 
 
@@ -53,15 +45,15 @@ public class TestDataCreator {
 //		generator.generateGraph(testGraph, factory, null);
 
 		
-
-		int numberOfNodes = 30;
-		int numberOfTraces = 14;
+		//in dieser einstellung ca. ne minute
+		int numberOfNodes = 500;
+		int numberOfTraces = 10;
 	
-		int minTraceLength = 2; //minTraceLength MUST be less than numberOfNodes
-		int maxTraceLength = 3; //maxTraceLength MUST be less than numberOfNodes
-		
+		int minTraceLength = 7; //minTraceLength MUST be less than numberOfNodes
+		int maxTraceLength = 8; //maxTraceLength MUST be less than numberOfNodes
+
 		int minTimeVariety = 0; //starting time
-		int maxTimeVariety = 10;
+		int maxTimeVariety = 3600;
 		int minNetworkDelay = 0; //simulated delay in the network
 		int maxNetworkDelay = 5; 
 		int minTimeBeforeForwarding = 0; //time before forwarding to next address on trace
@@ -76,7 +68,7 @@ public class TestDataCreator {
 		for(int i = 0; i < numberOfNodes;i++){
 			byte[] tmpNodeId = new byte[2];
 			for(int j = 0; j < tmpNodeId.length;j++){
-				double randomDouble = ((double)Math.random()*256.0);
+				double randomDouble = Math.random()*256.0;
 				tmpNodeId[j]= (byte)(int)randomDouble;
 			}
 			double x = Math.random()*10;
@@ -87,6 +79,7 @@ public class TestDataCreator {
 			for(Node n : nodes){
 				if(Arrays.equals(n.getNodeId(),tmpNodeId)){
 					existing = true;
+					i--;
 				}
 			}
 			//add new node to graph and nodelist
@@ -111,16 +104,20 @@ public class TestDataCreator {
 			int timeCounter = (int)(Math.random()*(maxTimeVariety-minTimeVariety))+minTimeVariety; //starting time of each trace between 0 and 10
 			//generate a flowLabel
 			//first the id from the nodeid/address between 0 and 1024
+			for (byte b : actualPosition.getNodeId()) {
+				System.out.format("0x%x ", b);
+			}
 			int flowLabelId = (Calculator.byteArrayToInt(actualPosition.getNodeId())) % 1024;
+			System.out.println(Calculator.byteArrayToInt(actualPosition.getNodeId()));
 			//now a counter-number for the label
 			int flowLabelCounter = (int)(Math.random()*1024);
 			int flowLabel = (flowLabelId << 10) + flowLabelCounter;
 			byte[] flowLabelArray = ByteBuffer.allocate(4).putInt(flowLabel).array(); //array with one field to much ... ignore it
-			System.out.println("ID: "+flowLabelId + "  Counter: "+flowLabelCounter+"  Complete: "+flowLabel);
-			for (byte b : flowLabelArray) {
-				System.out.format("0x%x ", b);
-			}
-			System.out.println();
+//			System.out.println("ID: "+flowLabelId + "  Counter: "+flowLabelCounter+"  Complete: "+flowLabel);
+//			for (byte b : flowLabelArray) {
+//				System.out.format("0x%x ", b);
+//			}
+//			System.out.println();
 			//just ANY example data
 			byte[] payload = new byte[]{107,59,0,0,1,58,2,(byte) 133,0,122,46,0,0,0,0,1,1,0,0,0,0,0,0};
 			//now use flowLabel to change the payload at position 2,3 and 4
@@ -205,13 +202,16 @@ public class TestDataCreator {
 		DOTExporter<Node, MACPacket> ex = new DOTExporter<Node, MACPacket>(vProvider, null, null);
 		
 		DirectedGraph<Node, MACPacket> testGraph;
+		//create a graph for each trace
 		for(int i = 0 ; i < numberOfTraces; i++){
 			ArrayList<MACPacket> tmpPacketList = graphPacketsLists.get(i);
 			testGraph = new DefaultDirectedGraph<Node, MACPacket>(MACPacket.class);
-			for(Node n: nodes){
-				testGraph.addVertex(n);
-			}
+//			for(Node n: nodes){
+//				testGraph.addVertex(n);
+//			}
 			for(MACPacket p : tmpPacketList){
+				testGraph.addVertex(p.getSourceNode());
+				testGraph.addVertex(p.getDestinationNode());
 				testGraph.addEdge(p.getSourceNode(), p.getDestinationNode(), p);
 			}
 			try {
@@ -223,7 +223,21 @@ public class TestDataCreator {
 			}
 		}
 		
-		
+		//create a graph for all together at least
+		testGraph = new DefaultDirectedGraph<Node, MACPacket>(MACPacket.class);
+		for(Node n: nodes){
+			testGraph.addVertex(n);
+		}
+		for(MACPacket p : packets){
+			testGraph.addEdge(p.getSourceNode(), p.getDestinationNode(), p);
+		}
+		try {
+			FileWriter writer = new FileWriter(new File(time + "/CompleteGraph.txt"));
+			ex.export( writer, testGraph);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public ArrayList<MACPacket> getPackets(){
