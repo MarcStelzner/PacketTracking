@@ -12,6 +12,7 @@ import javax.swing.JOptionPane;
 
 import packettracking.model.MACPacket;
 import packettracking.model.Node;
+import packettracking.support.Calculator;
 
 
 public class Decoder {
@@ -239,12 +240,11 @@ public class Decoder {
 		}
 		
 		//10.: payload
-		String[] tempPayloadString = tempLineString[tempLineString.length-1].split(","); //last element is the payload
-		tempPacket.setPayload(parsePayloadToByteArray(tempPayloadString));
-		
-//		System.out.println("Flow Label: "+tempPacket.getFlowLabel());
-//		System.out.println("Datagram Size: "+tempPacket.getFragmentationSize());
-//		System.out.println("Datagram Tag: "+tempPacket.getFragmentationTag());
+		//TODO: alt
+		//String[] tempPayloadString = tempLineString[tempLineString.length-1].split(","); //last element is the payload
+		//tempPacket.setPayload(parsePayloadToByteArray(tempPayloadString));
+		//neu
+		tempPacket.setPayload(Calculator.hexStringToByteArray(tempLineString[tempLineString.length-1]));
 		
 		//Pcap Header for PacketLength
 		tempPacket.setOriginalLength(lengthArray);
@@ -360,20 +360,21 @@ public class Decoder {
 		return nodes;
 	}
 	
-	/**
-	 * Parsing StringArray into an ByteArray
-	 * @param toParse is the StringArray
-	 * @param length of the StringArray
-	 */
-	private byte[] parsePayloadToByteArray(String[] toParse){
-		byte[] bytes = new byte[toParse.length];
-		//for each position of the string parse to byte
-		//and put everything into one bytearray
-		for(int i = 0; i < toParse.length; i++){
-			bytes[i] = parseStringToByteArray(toParse[i], 1)[0];
-		}
-		return bytes;
-	}
+	// TODO alt
+//	/**
+//	 * Parsing StringArray into an ByteArray
+//	 * @param toParse is the StringArray
+//	 * @param length of the StringArray
+//	 */
+//	private byte[] parsePayloadToByteArray(String[] toParse){
+//		byte[] bytes = new byte[toParse.length];
+//		//for each position of the string parse to byte
+//		//and put everything into one bytearray
+//		for(int i = 0; i < toParse.length; i++){
+//			bytes[i] = parseStringToByteArray(toParse[i], 1)[0];
+//		}
+//		return bytes;
+//	}
 	
 	/**
 	 * Parsing String into an ByteArray

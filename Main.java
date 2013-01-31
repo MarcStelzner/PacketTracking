@@ -1,10 +1,10 @@
 package packettracking;
 
-import packettracking.controller.Controller;
+import packettracking.controller.MainController;
 
 public class Main {
 	public static void main(String[] args) {
-		Controller coordinator = new Controller(); 
+		MainController coordinator = new MainController(); 
 		boolean testRun = false;
 		coordinator.run(testRun);
 	}
