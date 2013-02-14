@@ -3,7 +3,7 @@ package packettracking.model;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import packettracking.support.Calculator;
+import packettracking.utils.Calculator;
 
 public class MultihopPacketTrace {
 	
@@ -12,8 +12,7 @@ public class MultihopPacketTrace {
 	
 	//Set FlowLabel
 	//every time the counter of flow label gets to the threshold(1024),
-	//another Stream with same Flow Label and higher occurrence is created
-	private final int flowLabelOccurence; //0 for first occurrence, -1 if not used
+	//another Stream with same Flow Label is created
 	private final int flowLabel; //-1 if not used
 	
 	//There may be more than one Fragmentation Tags (with Route Over)
@@ -28,24 +27,26 @@ public class MultihopPacketTrace {
 	//TODO: maybe useful as a reference
 	private final UUID uuid;
 	
-	//TODO: which ones of the three are useful ? ---> or other plan to build a path ?
 	private Node source;
 	private ArrayList<Node> intermediateNodes; // the nodes between the source and the destinations
 	private Node destination; //plural, because of (broadcasts, multicasts)
 
+	//if IPv6 address found for originator or destination, save it
+	private byte[] longIPSource;
+	private byte[] longIPDestination;
+	
 	/**
 	 * A Constructor for Messages with a FlowLabel
 	 * 
 	 * @param label
 	 * @param occurrence
 	 */
-	public MultihopPacketTrace(int label, int occurrence){
+	public MultihopPacketTrace(int label){
 		
 		//Initializing all global variables
 		
 		packetList = new ArrayList<MACPacket>();
 		
-		flowLabelOccurence = occurrence;
 		flowLabel = label;
 		
 		fragmentationTags = new ArrayList<Integer>();
@@ -71,7 +72,7 @@ public class MultihopPacketTrace {
 		
 		packetList = new ArrayList<MACPacket>();
 		
-		flowLabelOccurence = -1;
+//		flowLabelOccurence = -1;
 		flowLabel = -1;
 		
 		fragmentationTags = new ArrayList<Integer>(); //fragmentation not used
@@ -85,9 +86,9 @@ public class MultihopPacketTrace {
 		uuid  = UUID.randomUUID();
 	}
 	
-	public int getFlowLabelOccurence() {
-		return flowLabelOccurence;
-	}
+//	public int getFlowLabelOccurence() {
+//		return flowLabelOccurence;
+//	}
 
 	public int getFlowLabel() {
 		return flowLabel;
@@ -238,6 +239,22 @@ public class MultihopPacketTrace {
 		return fragmentationTags;
 	}
 	
+	public byte[] getLongIPSource() {
+		return longIPSource;
+	}
+
+	public void setLongIPSource(byte[] longIPSource) {
+		this.longIPSource = longIPSource;
+	}
+
+	public byte[] getLongIPDestination() {
+		return longIPDestination;
+	}
+
+	public void setLongIPDestination(byte[] longIPDestination) {
+		this.longIPDestination = longIPDestination;
+	}
+
 	public String toString(){
 		String traceToString = "Packet trace startet at a time of " + firstTime + " and ended at a time of " + lastTime + ".\n" 
 							+ "It has the flowlabel "+flowLabel+ ".\n"
@@ -253,7 +270,7 @@ public class MultihopPacketTrace {
 		for(MACPacket p : packetList){
 			traceToString += p.toString();
 		}
-		traceToString += "This was all information of the trace.\n\n";
+		traceToString += "This was all information about the trace.\n\n";
 		
 		
 		return traceToString;

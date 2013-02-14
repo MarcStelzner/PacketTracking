@@ -2,21 +2,22 @@ package packettracking.model;
 
 import java.util.ArrayList;
 
-import packettracking.support.Calculator;
+import packettracking.utils.Calculator;
 
 public class Node {
 	
-	//TODO: Maybe use a property file
-	private static final int BROADCAST_SHORT = 65535;
+	private static final int BROADCAST = 65535;
 
-	private byte[] nodeId; //TODO: is not really address-enough
+	private byte[] nodeId;
 	private ArrayList<MACPacket> sentPackets;
 	private ArrayList<MACPacket> receivedPackets;
 	
 	private ArrayList<MultihopPacketTrace> tracesByOrigin;
 	private ArrayList<MultihopPacketTrace> tracesByDestination;
 	
-	//Coordinates of the Node, TODO: Maybe as a vector ?
+	//is this "node" just a broadcast address ?
+	private boolean broadcast;
+	
 	double x;
 	double y;
 	double z;
@@ -26,6 +27,11 @@ public class Node {
 		y = -1;
 		z = -1;
 		this.nodeId = nodeId;
+		broadcast = false;
+		if(Calculator.byteArrayToInt(nodeId)==BROADCAST){
+			System.out.println("---------BROADCAST---------");
+			broadcast = true;
+		}
 		this.sentPackets = new ArrayList<MACPacket>();
 		this.receivedPackets = new ArrayList<MACPacket>();
 		this.tracesByOrigin = new ArrayList<MultihopPacketTrace>();
@@ -37,6 +43,11 @@ public class Node {
 		this.y = y;
 		this.z = z;
 		this.nodeId = nodeId;
+		broadcast = false;
+		if(Calculator.byteArrayToInt(nodeId)==BROADCAST){
+			System.out.println("---------BROADCAST---------");
+			broadcast = true;
+		}
 		this.sentPackets = new ArrayList<MACPacket>();
 		this.receivedPackets = new ArrayList<MACPacket>();
 		this.tracesByOrigin = new ArrayList<MultihopPacketTrace>();
@@ -109,19 +120,18 @@ public class Node {
 		this.tracesByDestination.add(traceByDestination);
 	}
 	
+	public boolean isBroadcast(){
+		return broadcast;
+	}
+	
 	public String toString(){ 
-		boolean broadcastNode = false;
 		String nodeToString = "Node ";
-		if(nodeId.length > 2){
-			nodeToString += Calculator.bytesToHex(nodeId);
-		} else {
-			if(BROADCAST_SHORT == Calculator.byteArrayToInt(nodeId)){
-				broadcastNode = true;
-			}
-			nodeToString += Calculator.bytesToHex(nodeId);
+		nodeToString += Calculator.bytesToHex(nodeId);
+		//only add node positions, if the exist
+		if(x != -1 && y != -1 && z != -1){
+			nodeToString += " at the coordinates "+x+" , "+y+" , "+z+" ";
 		}
-		nodeToString += " at the coordinates "+x+" , "+y+" , "+z+" ";
-		if(broadcastNode){
+		if(broadcast){
 			nodeToString = "Broadcast";
 		}
 		

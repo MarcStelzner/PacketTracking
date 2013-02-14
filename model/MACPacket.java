@@ -1,6 +1,8 @@
 package packettracking.model;
 
-import packettracking.support.Calculator;
+import java.nio.ByteBuffer;
+
+import packettracking.utils.Calculator;
 
 public class MACPacket  implements Comparable<MACPacket>{
 	
@@ -117,22 +119,44 @@ public class MACPacket  implements Comparable<MACPacket>{
 	public void setDestinationNode(Node destinationNode) {
 		this.destinationNode = destinationNode;
 	}
-	
-//	/**
-//	 * The "According Node" is the node, where the packet belongs to.
-//	 * If the logged packet is from the Receiver, it is the Destination,
-//	 * else if it is logged at the sender, the "According Node" is the Source
-//	 * @return
-//	 */
-//	public Node getAccordingNode() {
-//		if(isReceived){
-//			return destinationNode;
-//		}
-//		else {
-//			return sourceNode;
-//		}
-//	}
 
+	/**
+	 * Get Originator either from Mesh Header or 6LoWPAN compressed header
+	 * 
+	 * @return originator address
+	 */
+	public byte[] getOriginator() {
+		//return mesh address if available
+		if(sixLoWPANpacket != null && sixLoWPANpacket.isMeshHeader()){
+			return sixLoWPANpacket.getOriginatorAddress();
+		//else look for an existing sixlowpan address
+		} else if(sixLoWPANpacket != null && sixLoWPANpacket.isIphcHeader() && sixLoWPANpacket.getSource() != null){
+			return sixLoWPANpacket.getSource();
+			//otherwise it's really just null
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * Get Originator either from Mesh Header or 6LoWPAN compressed header
+	 * 
+	 * @return originator address
+	 */
+	public byte[] getFinalDestination() {
+		//return mesh address if available
+		if(sixLoWPANpacket != null && sixLoWPANpacket.isMeshHeader()){
+			return sixLoWPANpacket.getFinalAddress();
+		//else look for an existing sixlowpan address
+		} else if(sixLoWPANpacket != null && sixLoWPANpacket.isIphcHeader() 
+				&& sixLoWPANpacket.getDestination() != null){
+			return sixLoWPANpacket.getDestination();
+		//otherwise it's really just null
+		} else {
+			return null;
+		}
+	}
+	
 	public byte[] getPayload() {
 		return payload;
 	}
@@ -220,7 +244,47 @@ public class MACPacket  implements Comparable<MACPacket>{
 			return -1;
 		}
 	}
+	
+	/**
+	 * Returns true for an existing IPHC header, false if theres none or even no sixLoWPANpacket
+	 * 
+	 * @return boolean, true for IPHC existing
+	 */
+	public boolean isIPHC() {
+		if(sixLoWPANpacket != null && sixLoWPANpacket.isIphcHeader()){
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/**
+	 * TODO: TESTMETHOD
+	 */
+	public void setFlowLabel(int flowLabel) {
+		sixLoWPANpacket.setFlowLabel(flowLabel);
+	}
+	
+	/**
+	 * TODO: TESTMETHOD
+	 */
+	public void setIPHC(boolean iphc) {
+		sixLoWPANpacket.setIPHC(iphc);
+	}
+	
+	/**
+	 * TODO: TESTMETHOD
+	 */
+	public void setOriginator(byte[] originator) {
+		sixLoWPANpacket.setOriginator(originator);
+	}
 
+	/**
+	 * TODO: TESTMETHOD
+	 */
+	public void setFinalDestination(byte[] finalDestination) {
+		sixLoWPANpacket.setFinalDestination(finalDestination);
+	}
 
 	/**
 	 * Returns a FragmentationTag, if there is one existing in the payload
@@ -253,23 +317,23 @@ public class MACPacket  implements Comparable<MACPacket>{
 		int microSeconds = 0;
 		int pMicroSeconds = 0;
 		
-		for(int i = 0 ; i < 4 ; i++){
-			seconds += (this.seconds[i] << ((4-1-i)*8)) & 0xFF;
+		for(int i = 0 ; i < this.seconds.length ; i++){
+			seconds += (this.seconds[i] << ((this.seconds.length-1-i)*8)) & 0xFF;
 		}
-		for(int i = 0 ; i < 4 ; i++){
-			pSeconds += (p.getSeconds()[i] << ((4-1-i)*8)) & 0xFF;
+		for(int i = 0 ; i < p.getSeconds().length ; i++){
+			pSeconds += (p.getSeconds()[i] << ((p.getSeconds().length-1-i)*8)) & 0xFF;
 		}
-		for(int i = 0 ; i < 4 ; i++){
-			milliSeconds += (this.milliSeconds[i] << ((4-1-i)*8)) & 0xFF;
+		for(int i = 0 ; i < this.milliSeconds.length ; i++){
+			milliSeconds += (this.milliSeconds[i] << ((this.milliSeconds.length-1-i)*8)) & 0xFF;
 		}
-		for(int i = 0 ; i < 4 ; i++){
-			pMilliSeconds += (p.getMilliSeconds()[i] << ((4-1-i)*8)) & 0xFF;
+		for(int i = 0 ; i < p.getMilliSeconds().length ; i++){
+			pMilliSeconds += (p.getMilliSeconds()[i] << ((p.getMilliSeconds().length-1-i)*8)) & 0xFF;
 		}
-		for(int i = 0 ; i < 4 ; i++){
-			microSeconds += (this.microSeconds[i] << ((4-1-i)*8)) & 0xFF;
+		for(int i = 0 ; i < this.microSeconds.length ; i++){
+			microSeconds += (this.microSeconds[i] << ((this.microSeconds.length-1-i)*8)) & 0xFF;
 		}
-		for(int i = 0 ; i < 4 ; i++){
-			pMicroSeconds += (p.getMicroSeconds()[i] << ((4-1-i)*8)) & 0xFF;
+		for(int i = 0 ; i < p.getMicroSeconds().length ; i++){
+			pMicroSeconds += (p.getMicroSeconds()[i] << ((p.getMicroSeconds().length-1-i)*8)) & 0xFF;
 		}
 		
 		//get all seconds into one time of long and after subtraction back to int
@@ -309,9 +373,18 @@ public class MACPacket  implements Comparable<MACPacket>{
 		
 		//first pcap-packet
 		System.arraycopy(getSeconds(), 0, output, 0, 4);
-		System.arraycopy(getMicroSeconds(), 0, output, 4, 4);
-		System.arraycopy(getIncludingLength(), 0, output, 8, 4);
-		System.arraycopy(getOriginalLength(), 0, output, 12, 4);
+		//for microseconds, combine milli and micro:
+		int tmpMilli = Calculator.byteArrayToInt(getMilliSeconds());
+		int tmpMicro = Calculator.byteArrayToInt(getMicroSeconds());
+		tmpMicro += (tmpMilli*1000);
+		byte[] tmpMicroByte = ByteBuffer.allocate(4).putInt(tmpMicro).array();
+		System.arraycopy(tmpMicroByte, 0, output, 4, 4);
+		//2 empty entries for length to fill space
+		output[8] = (byte) 0; output[9] = (byte) 0;
+		System.arraycopy(getIncludingLength(), 0, output, 10, 2);
+		//2 empty entries for length
+		output[12] = (byte) 0; output[13] = (byte) 0;
+		System.arraycopy(getOriginalLength(), 0, output, 14, 2);
 		
 		//now MAC Frame (bits are in wrong order)
 		System.arraycopy(getFrameControl(), 0, output, 16, 2);

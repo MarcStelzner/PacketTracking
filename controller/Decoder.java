@@ -1,18 +1,14 @@
 package packettracking.controller;
 import java.awt.FileDialog;
-import java.awt.Frame;
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-
 import packettracking.model.MACPacket;
 import packettracking.model.Node;
-import packettracking.support.Calculator;
+import packettracking.utils.Calculator;
+import packettracking.view.DecoderView;
 
 
 public class Decoder {
@@ -35,34 +31,13 @@ public class Decoder {
 		packets = new ArrayList<MACPacket>();
 		nodes = new ArrayList<Node>();
 
-		//Ask user if any protocol (only 6lowpan is supported at the moment) was used or just plain data
-		JFrame frame = new JFrame("The Question for protocols");		
-		Object[] options = {"Plain Payload", "Protocols"};
-		int n = JOptionPane.showOptionDialog(frame,
-		"To avoid false protocol detection:\n" +
-		"Are any standardized protocols used in the datalog or was just plain payload send?\n" +
-		"(In this version only 6LoWPAN is supported for packet tracking)",
-		"Important Question",
-		JOptionPane.YES_NO_OPTION,
-		JOptionPane.QUESTION_MESSAGE,
-		null,     //do not use a custom Icon
-		options,  //the titles of buttons
-		options[0]); //default button title
+		DecoderView view = new DecoderView();
 		
-		//the information is used to recognize additional payload-data
-		boolean protocols = false;
-		if(n == 1){
-			protocols = true;
-		}
+		boolean protocols = view.askForProtocols();
 
-		//Dialog to load Data
-	    FileDialog fd = new FileDialog(new Frame(), "Choose the Shawn-Datalog \"*.txt\" to read.", FileDialog.LOAD);
-	    fd.setFile("*.txt");
-	    fd.setDirectory(".\\");
-	    fd.setLocation(50, 50);
-	    fd.setVisible(true);
 		//get address out of dialog
-	    String address = fd.getDirectory() + fd.getFile();// + System.getProperty("file.separator") + fd.getFile();
+		FileDialog fd = view.askForDestination();
+	    String address = fd.getDirectory() + fd.getFile();	
 		String line = "";
 		
 		//now create bytefield to read
@@ -81,27 +56,27 @@ public class Decoder {
 				//check length(Count of ";"+1) for Informationtype:
 				
 				//Length of 5 --> NodeLocation
-				//1. Size of Addresses
-				//2. NodeID (Address)
-				//3. X-Coordinate
-				//4. Y-Coordinate
-				//5. Z-Coordinate (seems unused so far)
-				if(tempLineString.length == 5){
+				//0. Size of Addresses TODO: elided
+				//1. NodeID (Address)
+				//2. X-Coordinate
+				//3. Y-Coordinate
+				//4. Z-Coordinate (seems unused so far)
+				if(tempLineString.length == 4){
 					parseNodeLocation(tempLineString);
 				}
 				
 				//Length of 10 --> LoggedPacket
-				//1. Size of Addresses
-				//2. NodeID (Logging Node Address)
-				//3. Time in Seconds
-				//4. Time in Milliseconds
-				//5. Time in Microseconds
-				//6. Source
-				//7. Destination
-				//8. Link Metric
-				//9. Size of Payload
-				//10. Payload
-				else if(tempLineString.length == 10){
+				//0. Size of Addresses TODO: elided
+				//1. NodeID (Logging Node Address)
+				//2. Time in Seconds
+				//3. Time in Milliseconds
+				//4. Time in Microseconds
+				//5. Source
+				//6. Destination
+				//7. Link Metric
+				//8. Size of Payload
+				//9. Payload
+				else if(tempLineString.length == 9){
 					parsePacket(tempLineString, protocols);
 					//System.out.println("Packet #"+packetCount+" is read.");
 					packetCount ++;
@@ -125,24 +100,27 @@ public class Decoder {
 	 * @param packetData
 	 */
 	private void parseNodeLocation(String[] packetData){
-		//1. read size of the address
-		boolean adressOf64Bit = false;
-		if(Integer.parseInt(packetData[0]) > 2){
-			//adressOf64Bit = true;   //  64 bit is strange at the moment with shawn (because it's always 32 bit)
-		}
-
-		//2. read node id
-		byte[] tmpNodeId;
-		if(adressOf64Bit){
-			tmpNodeId = parseStringToByteArray(packetData[1], 8);
-		} else {
-			tmpNodeId = parseStringToByteArray(packetData[1], 2);
-		}
+//		//0. read size of the address
+//		boolean adressOf64Bit = false;
+//		if(Integer.parseInt(packetData[0]) > 2){
+//			//adressOf64Bit = true;   //  64 bit is strange at the moment with shawn (because it's always 32 bit)
+//		}
+//
+//		//1. read node id
+//		byte[] tmpNodeId;
+//		if(adressOf64Bit){
+//			tmpNodeId = parseStringToByteArray(packetData[1], 8);
+//		} else {
+//			tmpNodeId = parseStringToByteArray(packetData[1], 2);
+//		}
+		
+		byte[] tmpNodeId = Calculator.hexStringToByteArray(packetData[0]);
+		
 		boolean nodeFound = false;
 		// 3./4./5. set coordinates		
-		double x = Double.parseDouble(packetData[2]);
-		double y = Double.parseDouble(packetData[3]);
-		double z = Double.parseDouble(packetData[4]);
+		double x = Double.parseDouble(packetData[1]); //TODO: ehemals packetData[2]
+		double y = Double.parseDouble(packetData[2]); //TODO: ehemalspacketData[3]
+		double z = Double.parseDouble(packetData[3]); //TODO: ehemals packetData[4]
 		for(Node node : nodes){
 			//check for existance of the nodeId in the nodelist
 			if(Arrays.equals(node.getNodeId(),tmpNodeId)){//node.getNodeId().equals(tmpNodeId)){
@@ -159,6 +137,7 @@ public class Decoder {
 		}		
 	}
 	
+	
 	/**
 	 * Private method for readData for reading lines with packet-information
 	 * 
@@ -169,10 +148,92 @@ public class Decoder {
 		String[] tempLineString = packetData;
 		MACPacket tempPacket = new MACPacket(protocols);
 		
+		//1.: Get the logging nodes address
+		byte[] tmpNodeId = Calculator.hexStringToByteArray(tempLineString[0]);
+		
+		//2.: time in seconds
+		tempPacket.setSeconds(Calculator.hexStringToByteArray(tempLineString[1]));
+		
+		//3.: additional milliseconds
+		tempPacket.setMilliSeconds(Calculator.hexStringToByteArray(tempLineString[2])); 
+		
+		//4.: additional microseconds
+		tempPacket.setMicroSeconds(Calculator.hexStringToByteArray(tempLineString[3])); 		
+		
+		//5.: source (and PAN)
+		byte[] tmpSource = Calculator.hexStringToByteArray(tempLineString[4]);				
+		
+		//6.: destination (and PAN)
+		byte[] tmpDestination = Calculator.hexStringToByteArray(tempLineString[5]);	
+		
+		//with information of logging node, src and dest. find the node or create a new one to link it to the packet
+		updateNodes(tempPacket, tmpNodeId, tmpSource, tmpDestination);	
+		
+		//7.: now the link metric 
+		int linkMetric = Calculator.byteArrayToInt(Calculator.hexStringToByteArray(tempLineString[6]));
+		tempPacket.setLinkMetric(linkMetric);
+		
+		//8.: readlength of payload in bytes and set Pcap with it
+		// need to add length of MAC-Header
+		byte[] lengthArray = Calculator.hexStringToByteArray(tempLineString[7]);
+		byte macLength = 11;	
+		//calculations for possible carry when adding macLength
+		for(int i = lengthArray.length-1; i >= 0; i--){
+			int checklength = lengthArray[i];
+			//first correction from signed to unsigned
+			if(checklength < 0 ){
+				checklength=256+checklength;
+			}
+			//check for overflow
+			if((checklength+macLength)>0xff){
+				lengthArray[i] = (byte)(checklength+macLength);
+				macLength = 1; // setting carry
+			} else {
+				lengthArray[i] = (byte)(checklength+macLength);
+				break; //no more carry possible, so break
+			}
+		}
+		
+		//9.: payload
+		tempPacket.setPayload(Calculator.hexStringToByteArray(tempLineString[tempLineString.length-1]));
+		
+		//Pcap Header for PacketLength
+		tempPacket.setOriginalLength(lengthArray);
+		//includingLength should depend on maximum messagelength ... but size of maximum length is always 2^16(65536) Bytes
+		tempPacket.setIncludingLength(lengthArray); 
+		
+		// --- "A maybe TODO": next parameters are not read, but set ---
+
+		//set a default PAN four Source and destination
+		tempPacket.setSourcePAN(new byte[]{0,0});
+		tempPacket.setDestinationPAN(new byte[]{0,0});
+		
+		//MAC frame control (only address size is read)
+		//tempPacket.setFrameControl(new byte[]{(byte)0x01, (byte)0xcc}); <<< for size of 64 bit
+		tempPacket.setFrameControl(new byte[]{(byte)0x01, (byte)0x88}); 	
+		
+		//Sequence number
+		tempPacket.setSequenceNumber((byte)0);
+		
+		//at last add the packet to the Packetlist
+		packets.add(tempPacket);
+	}
+	
+	
+	/**
+	 * Private method for readData for reading lines with packet-information
+	 * 
+	 * @param packetData
+	 * @param protocols
+	 */
+/*	private void parsePacketALT(String[] packetData, boolean protocols){
+		String[] tempLineString = packetData;
+		MACPacket tempPacket = new MACPacket(protocols);
+		
 		//1. Size of Addresses
 		boolean adressOf64Bit = false;
 		if(Integer.parseInt(tempLineString[0]) > 2){
-//			adressOf64Bit = true;   //  64 bit is strange at the moment with shawn (because it's always 32 bit)
+			adressOf64Bit = true;   //  64 bit is strange at the moment with shawn (because it's always 32 bit)
 		}
 		
 		//2.: Get the logging nodes address
@@ -182,15 +243,16 @@ public class Decoder {
 		} else {
 			tmpNodeId = parseStringToByteArray(tempLineString[1], 2);
 		}
+
 		
 		//3.: time in seconds
 		tempPacket.setSeconds(parseStringToByteArray(tempLineString[2], 4));
 		
 		//4.: additional milliseconds
-		tempPacket.setMilliSeconds(parseStringToByteArray(tempLineString[3], 4)); 
+		tempPacket.setMilliSeconds(parseStringToByteArray(tempLineString[3], 2)); 
 		
 		//5.: additional microseconds
-		tempPacket.setMicroSeconds(parseStringToByteArray(tempLineString[4], 4)); 		
+		tempPacket.setMicroSeconds(parseStringToByteArray(tempLineString[4], 2)); 		
 		
 		//6.: source (and PAN)
 		byte[] tmpSource;
@@ -270,7 +332,7 @@ public class Decoder {
 
 		//at last add the packet to the Packetlist
 		packets.add(tempPacket);
-	}
+	}*/
 	
 	/**
 	 * This method updates the node-list for the parsePacket() if it is necessary
@@ -301,6 +363,7 @@ public class Decoder {
 			}
 		}
 		
+		//check if node is existing or needs to be created
 		for(Node node : nodes){
 			//check for the logged location (never broadcast here)
 			if(Arrays.equals(node.getNodeId(), tmpNodeId)){
@@ -332,6 +395,11 @@ public class Decoder {
 			nodes.add(newNode);
 			if(tempPacket.isReceived()){
 				newNode.addReceivedPackets(tempPacket);
+				//if also logged here and node wasn't found, add logged at
+				if(!loggedAtFound && !broadcast){
+					tempPacket.setLoggedAt(newNode);
+					loggedAtFound = true;
+				}
 			}
 			tempPacket.setDestinationNode(newNode);
 		}
@@ -340,10 +408,15 @@ public class Decoder {
 			nodes.add(newNode);
 			if(!tempPacket.isReceived()){
 				newNode.addSentPackets(tempPacket);
+				//if also logged here and node wasn't found, add logged at
+				if(!loggedAtFound){
+					tempPacket.setLoggedAt(newNode);
+					loggedAtFound = true;
+				}
 			}
 			tempPacket.setSourceNode(newNode);
 		}
-		//only add new node on broadcast, otherwise loggedAt would not differ either from source or destination
+		//only add new node on broadcast and when it's not sending the broadcast, otherwise loggedAt would not differ either from source or destination
 		if(!loggedAtFound && broadcast){
 			Node newNode = new Node(tmpNodeId);
 			nodes.add(newNode);
@@ -358,42 +431,5 @@ public class Decoder {
 	
 	public ArrayList<Node> getNodes(){
 		return nodes;
-	}
-	
-	// TODO alt
-//	/**
-//	 * Parsing StringArray into an ByteArray
-//	 * @param toParse is the StringArray
-//	 * @param length of the StringArray
-//	 */
-//	private byte[] parsePayloadToByteArray(String[] toParse){
-//		byte[] bytes = new byte[toParse.length];
-//		//for each position of the string parse to byte
-//		//and put everything into one bytearray
-//		for(int i = 0; i < toParse.length; i++){
-//			bytes[i] = parseStringToByteArray(toParse[i], 1)[0];
-//		}
-//		return bytes;
-//	}
-	
-	/**
-	 * Parsing String into an ByteArray
-	 * @param toParse is the String
-	 * @param length of the String in Bytes
-	 */
-	private byte[] parseStringToByteArray(String toParse, int length){
-		//now parse String to long first ... careful: no more than length of 8(bytes) !
-		long tempLong = Long.parseLong(toParse);
-		//then parse long to an Array of Bytes
-		byte[] bytes = ByteBuffer.allocate(8).putLong(tempLong).array();
-		//now correct length
-		if(bytes.length > length){
-			byte[] tempBytes = new byte[length];
-			for(int i = 0; i<tempBytes.length;i++){
-				tempBytes[i] = bytes[i + (bytes.length - length)];
-			}
-			bytes = tempBytes;
-		}
-		return bytes;
 	}
 }
