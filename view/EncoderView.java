@@ -7,11 +7,23 @@ import java.io.FileOutputStream;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
+/**
+ * EncoderView is the interface for the Encoder for input/output of the data
+ * 
+ * @author 		Marc
+ * @version     1.0                 
+ * @since       2013-02-14  
+ */
 public class EncoderView {
 	
 	public EncoderView(){	
 	}
 	
+	/**
+	 * askForExport questions the user whether the user wants to save the data or not
+	 * 
+	 * @return true, if user wishes to export the data
+	 */
 	public boolean askForExport(){
 		JFrame frame = new JFrame("The Question for export");		
 		Object[] options = {"Yes", "No"};
@@ -32,6 +44,12 @@ public class EncoderView {
 		}
 	}
 	
+	/**
+	 * The method opens a dialog with the user and asks for the destination where the processed
+	 * data shall be saved as .pcap
+	 * 
+	 * @param outputArray is the data to be saved in pcap format
+	 */
 	public void exportDataToFile(byte[] outputArray){
 		System.out.println("All Packets ready to be saved.");
 		
@@ -68,5 +86,6 @@ public class EncoderView {
 	    else {
 	    	System.out.print("Invalid storing-address, terminating ...");
 	    }
+		fd.dispose();
 	}
 }

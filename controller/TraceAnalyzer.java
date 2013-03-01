@@ -10,6 +10,14 @@ import packettracking.model.MultihopPacketTrace;
 import packettracking.model.Node;
 import packettracking.utils.Calculator;
 
+/**
+ * The TraceAnalyzer is the heart of trace-reconstruction.
+ * With read-in packets and nodes, the different variables get analyzed to find according traces.
+ * 
+ * @author 		Marc
+ * @version     1.0                 
+ * @since       2013-01-28   
+ */
 public class TraceAnalyzer {
 	
 	//timeBetweenTraces is in seconds
@@ -20,6 +28,13 @@ public class TraceAnalyzer {
 		this.timeBetweenTraces = timeBetweenTraces; 
 	}
 	
+	/**
+	 * Main method of the class to iterate through the trace construction
+	 * 
+	 * @param packets
+	 * @param nodes
+	 * @return traces resulting from analysis
+	 */
 	public ArrayList<MultihopPacketTrace> setUpTraces(ArrayList<MACPacket> packets, ArrayList<Node> nodes){
 		ArrayList<MultihopPacketTrace> traces;
 		//at first, create the initial traces by getting the packets
@@ -38,182 +53,24 @@ public class TraceAnalyzer {
 		return traces;
 	}
 	
-//	/**
-//	 * This is the basic method to create all traces, not all information is set yet
-//	 * 
-//	 * @param packets
-//	 * @return initial trace list
-//	 */
-//	private ArrayList<MultihopPacketTrace> getTracesOld(ArrayList<MACPacket> packets){
-//		ArrayList<MultihopPacketTrace> traces = new ArrayList<MultihopPacketTrace>();
-//		
-//		//1. Sort packets to stream by FlowLabel and Fragmentation Header
-//		ArrayList<MACPacket> checklaterFragmentation = new ArrayList<MACPacket>();
-//		//timeBetweenTraces is in seconds
-//		//the time doubled is the secure distance between two traces with same flow label		
-//		int timeBetweenTraces = 3; 
-//		
-//		
-//		for(MACPacket p : packets){
-//			int tmpFlowLabel = p.getFlowLabel();
-//			int tmpFragmentationTag = p.getFragmentationTag();
-//			//is an flow label existing ?
-//			if(tmpFlowLabel >= 0){
-//				boolean found = false;
-//				for(MultihopPacketTrace s : traces){
-//					if(s.getFlowLabel() == tmpFlowLabel){
-//						//if the flow label matches, check time interval and same originator address
-//						if((Calculator.byteArrayToInt(p.getSeconds()) <= s.getLastTime()+timeBetweenTraces 
-//								|| (Calculator.byteArrayToInt(p.getSeconds()) == s.getLastTime()+timeBetweenTraces && Calculator.byteArrayToInt(p.getMilliSeconds()) <= s.getLastTimeMilliseconds()))
-//								&& (p.getOriginator() == null || Arrays.equals(p.getOriginator(),s.getLongIPSource()))){
-//							s.addPacket(p);
-//							p.setAccordingStream(s);
-//							found = true;
-//							break;
-//							//look for another stream (next occurrence) or create a new one
-//						}
-//					}
-//				}
-//				if(!found){
-//					MultihopPacketTrace tmpTrace = new MultihopPacketTrace(tmpFlowLabel);
-//					//is the originator of the packet known ?
-//					if(p.getOriginator() != null){
-//						tmpTrace.setLongIPSource(p.getOriginator());
-//					}
-//					//is the destination of the packet known ?
-//					if(p.getFinalDestination() != null){
-//						tmpTrace.setLongIPDestination(p.getFinalDestination());
-//					}
-//					traces.add(tmpTrace);
-//					tmpTrace.addPacket(p);
-//					p.setAccordingStream(tmpTrace);
-//				}
-//			}
-//			//no IPHC, but a fragmentation header ... keep the packet for later sorting
-//			else if (tmpFragmentationTag > 0 && !p.isIPHC()){
-//				//this is done later because a first fragment may get delayed or even lost/not logged 
-//				//when checking later the first fragment might have appeared or another one showed up
-//				checklaterFragmentation.add(p);
-//			}
-//			//no flow label or fragmentation tag? try originator and final destination then
-//			else{
-//				boolean found = false;
-//				for(MultihopPacketTrace s : traces){
-//					//if the packet knows final destination and originator, trace also, but route does not match, look at next trace
-//					if((p.getOriginator() != null && !Arrays.equals(p.getOriginator(),s.getLongIPSource()))
-//							 || (p.getFinalDestination() != null && !Arrays.equals(p.getFinalDestination(),s.getLongIPDestination()))){
-//						// do nothing
-//					}
-//					//if route time and payloadsize matches to a packet from stream, packet is found !
-//					else if((p.getOriginator() != null && Arrays.equals(p.getOriginator(),s.getLongIPSource()))
-//							 && (p.getFinalDestination() != null && Arrays.equals(p.getFinalDestination(),s.getLongIPDestination()))
-//							 && (Calculator.byteArrayToInt(p.getSeconds()) <= s.getLastTime()+timeBetweenTraces 
-//										|| (Calculator.byteArrayToInt(p.getSeconds()) == s.getLastTime()+timeBetweenTraces && Calculator.byteArrayToInt(p.getMilliSeconds()) <= s.getLastTimeMilliseconds()))
-//										&& (p.getPayloadSize() == s.getPacketList().get(0).getPayloadSize())){
-//						found = true;
-//					}
-//					//no originator or final destination ? go the hard way
-//					//
-//					else if (p.getOriginator() == null || p.getFinalDestination() == null){
-//						for(MACPacket sp : s.getPacketList()){
-//							// does the packet may be a forwarded packet ? time is matching ?
-//							int tmpTimeBetweenStreams = timeBetweenTraces;
-//							if(p.getDestinationNode().equals(sp.getDestinationNode())
-//									&& p.getSourceNode().equals(sp.getSourceNode())
-//									&& p.getPayloadSize() == sp.getPayloadSize()
-//									&& (Calculator.byteArrayToInt(p.getSeconds()) <= s.getLastTime()+tmpTimeBetweenStreams 
-//									|| (Calculator.byteArrayToInt(p.getSeconds()) == s.getLastTime()+tmpTimeBetweenStreams && Calculator.byteArrayToInt(p.getMilliSeconds()) <= s.getLastTimeMilliseconds()))){
-//								found = true;
-//								break;
-//							}
-//						}
-//					}
-//					if(found){
-//						//add packet to stream and break
-//						s.addPacket(p);
-//						p.setAccordingStream(s);
-//						break;
-//					}
-//				}
-//				//no matching trace found ? create a new one
-//				if(!found){
-//					MultihopPacketTrace tmpTrace = new MultihopPacketTrace();
-//					//is the originator of the packet known ?
-//					if(p.getOriginator() != null){
-//						tmpTrace.setLongIPSource(p.getOriginator());
-//					}
-//					//is the destination of the packet known ?
-//					if(p.getFinalDestination() != null){
-//						tmpTrace.setLongIPDestination(p.getFinalDestination());
-//					}
-//					traces.add(tmpTrace);
-//					tmpTrace.addPacket(p);
-//					p.setAccordingStream(tmpTrace);
-//				}
-//			}
-//		}
-//		
-//		//now sort the packets with only a fragmentation header but no flow label to the according streams
-//		for(MACPacket p : checklaterFragmentation){
-//			int checkLaterTag = p.getFragmentationTag();
-//			boolean found = false;
-//			for(MultihopPacketTrace s : traces){
-//				for(Integer i : s.getFragmentationTags()){
-//					//if the tag of the packet is found in a stream ...
-//					if(checkLaterTag == i){
-//						//... there's the problem of identical tags left, so we have to check for matching packet
-//						// from the stream ...
-//						for(MACPacket sp : s.getPacketList()){
-//							int streamPacketTag = sp.getFragmentationTag();
-//							//if tag, sender, receiver, datagramsize, datagram tag and approximately the time matches it's okay
-//							//           ---> but it's not easy anyway with first fragment missing, after IP-Hop -> new tag, only mesh-under could be solved
-//							if(streamPacketTag == checkLaterTag && p.getDestinationNode().equals(sp.getDestinationNode())
-//									&& p.getSourceNode().equals(sp.getSourceNode()) && p.getFragmentationSize() == sp.getFragmentationSize()
-//									&& !(Calculator.byteArrayToInt(p.getSeconds()) > (Calculator.byteArrayToInt(sp.getSeconds())+timeBetweenTraces))
-//									&& !((Calculator.byteArrayToInt(p.getSeconds())+timeBetweenTraces) < Calculator.byteArrayToInt(sp.getSeconds()))){
-//								found = true;
-//								s.addPacket(p);
-//								p.setAccordingStream(s);
-//								break; //get to next packet, no duplicates of packets
-//							}
-//						}
-//					}
-//					if(found){
-//						break; //... get to next packet
-//					}
-//				}
-//				if(found){
-//					break; //... get to next packet
-//				}	
-//			}
-//			//no matching packet with tag found ? --> create new stream
-//			if(!found){
-//				MultihopPacketTrace tmpTrace = new MultihopPacketTrace();
-//				traces.add(tmpTrace);
-//				tmpTrace.addPacket(p);
-//				p.setAccordingStream(tmpTrace);
-//			}
-//		}
-//		
-//		return traces;
-//	}
-	
-	
-	
 	/**
-	 * This is the basic method to create all traces, not all information is set yet
+	 * In this method all traces get basically constructed by packet information
 	 * 
 	 * @param packets
 	 * @return initial trace list
 	 */
 	private ArrayList<MultihopPacketTrace> getTraces(ArrayList<MACPacket> packets){
-		ArrayList<MultihopPacketTrace> openTraces = new ArrayList<MultihopPacketTrace>();
-		
-		//1. Sort packets to stream by FlowLabel and Fragmentation Header
+		//create a list for all unfinished, but started traces
+		ArrayList<MultihopPacketTrace> openTraces = new ArrayList<MultihopPacketTrace>();		
+		//a list of subsequent fragmentation header to sort in a second run
 		ArrayList<MACPacket> checklaterFragmentation = new ArrayList<MACPacket>();
-		
+		//a list of traces with first fragmentation headers who already got sorted, 
+		//but still needed for adding subsequent fragmentation headers in the second run
 		ArrayList<MultihopPacketTrace> tmpFinishedTraces = new ArrayList<MultihopPacketTrace>();
+		//a list for the finalized traces
+		ArrayList<MultihopPacketTrace> finalFinishedTraces = new ArrayList<MultihopPacketTrace>();
 		
+		//now start iterating over all packets to recreate the traces
 		for(MACPacket p : packets){
 			int tmpFlowLabel = p.getFlowLabel();
 			int tmpFragmentationTag = p.getFragmentationTag();
@@ -223,20 +80,22 @@ public class TraceAnalyzer {
 			for(MultihopPacketTrace s : openTraces){
 				if((Calculator.byteArrayToInt(p.getSeconds()) > s.getLastTime()+timeBetweenTraces )
 						|| (Calculator.byteArrayToInt(p.getSeconds()) == s.getLastTime()+timeBetweenTraces && Calculator.byteArrayToInt(p.getMilliSeconds()) > s.getLastTimeMilliseconds())){
-					//not matching anymore, put it to temporary DONE list
+					//not matching anymore, put it to temporary DONE list (if a first fragmentation header is existing)
+					if(s.getFragmentationTags().size() > 0){
+						tmpFinishedTraces.add(s);
+					} 
+					//...else put it to final DONE list 
+					else {
+						finalFinishedTraces.add(s);
+					}
 					newlyFinishedTraces.add(s);
 				}
 			}
-			//out of the loop, renew list
-//			System.out.println("newlyFinishedTraces old:" + tmpFinishedTraces.size());
-			tmpFinishedTraces.addAll(newlyFinishedTraces);
-//			System.out.println("newlyFinishedTraces new:" + tmpFinishedTraces.size());
-//			System.out.println("openTraces old:" + openTraces.size());
+			//out of the loop, now renew list of open traces
 			openTraces.removeAll(newlyFinishedTraces);
-//			System.out.println("openTraces new:" + openTraces.size());
 			
 			//no IPHC, but a fragmentation header ... keep the packet for later sorting
-			if (tmpFragmentationTag > 0 && !p.isIPHC()){
+			if (tmpFragmentationTag >= 0 && !p.isIPHC()){
 				//this is done later because a first fragment may get delayed or even lost/not logged 
 				//when checking later the first fragment might have appeared or another one showed up
 				checklaterFragmentation.add(p);
@@ -245,18 +104,17 @@ public class TraceAnalyzer {
 				if(tmpFlowLabel >= 0){
 					boolean found = false;
 					for(MultihopPacketTrace s : openTraces){
-						if(s.getFlowLabel() == tmpFlowLabel){
-							//if the flow label matches and same originator address
-							if(p.getOriginator() == null || Arrays.equals(p.getOriginator(),s.getLongIPSource())){
-								s.addPacket(p);
-								p.setAccordingStream(s);
-								found = true;
-								break;
-								//look for another stream (next occurrence) or create a new one
-							}
+						//if the flow label matches and same originator address
+						if((s.getFlowLabel() == tmpFlowLabel) && (p.getOriginator() == null || Arrays.equals(p.getOriginator(),s.getLongIPSource()))){
+							s.addPacket(p);
+							p.setAccordingStream(s);
+							found = true;
+							break;
 						}
 					}
+					//no matching flow label found ?
 					if(!found){
+						//create a new trace
 						MultihopPacketTrace tmpTrace = new MultihopPacketTrace(tmpFlowLabel);
 						//is the originator of the packet known ?
 						if(p.getOriginator() != null){
@@ -327,12 +185,9 @@ public class TraceAnalyzer {
 		
 		//put all other open traces to finished
 		tmpFinishedTraces.addAll(openTraces);
-		//a list for the finalized traces
-		ArrayList<MultihopPacketTrace> finalFinishedTraces = new ArrayList<MultihopPacketTrace>();
 		
 		//now sort the packets with only a fragmentation header but no flow label to the according streams
 		for(MACPacket p : checklaterFragmentation){
-			
 			//shorten the list by traces not matching the time anymore
 			ArrayList<MultihopPacketTrace> newlyFinishedTraces = new ArrayList<MultihopPacketTrace>();
 			for(MultihopPacketTrace s : tmpFinishedTraces){
@@ -346,21 +201,19 @@ public class TraceAnalyzer {
 			finalFinishedTraces.addAll(newlyFinishedTraces);
 			tmpFinishedTraces.removeAll(newlyFinishedTraces);
 			
-
-			
 			int checkLaterTag = p.getFragmentationTag();
 			boolean found = false;
-			for(MultihopPacketTrace s : tmpFinishedTraces){
+			for(MultihopPacketTrace s : tmpFinishedTraces){	
 				
 				//check if the streams starting time is too far off, than break ... every other trace is further off
 				if((Calculator.byteArrayToInt(p.getSeconds()) < s.getFirstTime()-timeBetweenTraces )
 						|| (Calculator.byteArrayToInt(p.getSeconds()) == s.getFirstTime()-timeBetweenTraces && Calculator.byteArrayToInt(p.getMilliSeconds()) < s.getFirstTimeMilliseconds())){
 					break;
 				}
-				
 				for(Integer i : s.getFragmentationTags()){
 					//if the tag of the packet is found in a stream ...
 					if(checkLaterTag == i){
+						
 						//... there's the problem of identical tags left, so we have to check for matching packet
 						// from the stream ...
 						for(MACPacket sp : s.getPacketList()){
@@ -451,7 +304,8 @@ public class TraceAnalyzer {
 			//(-BY ALREADY SET-)
 			if(m.getLongIPSource() != null){
 				//now get the right node by matching
-				for(Node n : m.getIntermediateNodes()){
+//				for(Node n : m.getIntermediateNodes()){
+				for(Node n : nodes){
 					if(Arrays.equals(n.getNodeId(),Arrays.copyOfRange(m.getLongIPSource(), m.getLongIPSource().length-2, m.getLongIPSource().length))){
 						sourceIsKnown = n;
 						break;
@@ -607,7 +461,8 @@ public class TraceAnalyzer {
 				//(-BY ALREADY SET-)
 				if(m.getLongIPDestination() != null){
 					//now get the right node by matching
-					for(Node n : m.getIntermediateNodes()){
+//					for(Node n : m.getIntermediateNodes()){
+					for(Node n : nodes){
 						if(Arrays.equals(n.getNodeId(),Arrays.copyOfRange(m.getLongIPDestination(), m.getLongIPDestination().length-2, m.getLongIPDestination().length))){
 							destinationIsKnown = n;
 							break;

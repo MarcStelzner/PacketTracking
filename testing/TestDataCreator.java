@@ -20,7 +20,14 @@ import packettracking.model.MultihopPacketTrace;
 import packettracking.model.Node;
 import packettracking.utils.Calculator;
 
-
+/**
+ * The TestData Creator is used to test performance of the application in
+ * efficiency and effectivity.
+ * 
+ * @author 		Marc
+ * @version     1.0                 
+ * @since       2013-01-23        
+ */   
 public class TestDataCreator {
 	
 	ArrayList<MACPacket> packets = new ArrayList<MACPacket>();
@@ -379,8 +386,8 @@ public class TestDataCreator {
 		int routeEDCount = traces/4;
 		int routeEFCount = traces/4;
 		
-		int flowLabelCounterA = -1;
-		int flowLabelCounterE = -1;
+		int flowLabelCounterA = 0;
+		int flowLabelCounterE = 0;
 		
 		//A equals 2000 (index 0)
 		//B equals 2001 ...
@@ -399,22 +406,34 @@ public class TestDataCreator {
 					startingNode = nodes.get(0);
 					endingNode = nodes.get(3);
 					routeADCount--;
-					flowLabelCounterA = (flowLabelCounterA + 1) % 1024;
+					flowLabelCounterA++;
+					if(flowLabelCounterA > 1023){
+						flowLabelCounterA = 1;
+					}
 				} else if(choice == 1 && routeAFCount > 0){
 					startingNode = nodes.get(0);
 					endingNode = nodes.get(5);
 					routeAFCount--;
-					flowLabelCounterA = (flowLabelCounterA + 1) % 1024;
+					flowLabelCounterA++;
+					if(flowLabelCounterA > 1023){
+						flowLabelCounterA = 1;
+					}
 				} else if(choice == 2 && routeEDCount > 0){
 					startingNode = nodes.get(4);
 					endingNode = nodes.get(3);
 					routeEDCount--;
-					flowLabelCounterE = (flowLabelCounterE + 1) % 1024;
+					flowLabelCounterE++;
+					if(flowLabelCounterE > 1023){
+						flowLabelCounterE = 1;
+					}
 				} else if(choice == 3 && routeEFCount > 0) {
 					startingNode = nodes.get(4);
 					endingNode = nodes.get(5);
 					routeEFCount--;
-					flowLabelCounterE = (flowLabelCounterE + 1) % 1024;
+					flowLabelCounterE++;
+					if(flowLabelCounterE > 1023){
+						flowLabelCounterE = 1;
+					}
 				}
 			}
 			
@@ -664,9 +683,477 @@ public class TestDataCreator {
 		packets = new ArrayList<MACPacket>();
 		nodes = createNodesInOrder(6);
 		
-		//TODO: create and save traces for comparison
-		//one fourth of the traces for each possible flow in random order !
+		int milliseconds = seconds * 1000;
 		
+		//one fourth of the traces for each possible flow in random order !
+		int routeADCount = traces/4;
+		int routeAFCount = traces/4;
+		int routeEDCount = traces/4;
+		int routeEFCount = traces/4;
+		
+		int flowLabelCounterA = 0;
+		int flowLabelCounterE = 0;
+		
+		//A equals 2000 (index 0)
+		//B equals 2001 ...
+		//C equals 2002
+		//D equals 2003
+		//E equals 2004
+		//F equals 2005 (index 5)
+		
+		int fragmentationTagCounterA = -1;
+		int fragmentationTagCounterB = 0;
+		int fragmentationTagCounterC = 0;
+		int fragmentationTagCounterE = -1;
+		
+		for(int i = 0; i < traces;i++){
+			//select one of the four routes by random
+			Node startingNode = null;
+			Node endingNode = null;
+			while(startingNode == null){
+				int choice = (int) (Math.random()*4);
+				if(choice == 0 && routeADCount > 0){
+					startingNode = nodes.get(0);
+					endingNode = nodes.get(3);
+					routeADCount--;
+					flowLabelCounterA++;
+					if(flowLabelCounterA > 1023){
+						flowLabelCounterA = 1;
+					}
+					fragmentationTagCounterA = (fragmentationTagCounterA + 1) % 256;
+				} else if(choice == 1 && routeAFCount > 0){
+					startingNode = nodes.get(0);
+					endingNode = nodes.get(5);
+					routeAFCount--;
+					flowLabelCounterA++;
+					if(flowLabelCounterA > 1023){
+						flowLabelCounterA = 1;
+					}
+					fragmentationTagCounterA = (fragmentationTagCounterA + 1) % 256;
+				} else if(choice == 2 && routeEDCount > 0){
+					startingNode = nodes.get(4);
+					endingNode = nodes.get(3);
+					routeEDCount--;
+					flowLabelCounterE++;
+					if(flowLabelCounterE > 1023){
+						flowLabelCounterE = 1;
+					}
+					fragmentationTagCounterE = (fragmentationTagCounterE + 1) % 256;
+				} else if(choice == 3 && routeEFCount > 0) {
+					startingNode = nodes.get(4);
+					endingNode = nodes.get(5);
+					routeEFCount--;
+					flowLabelCounterE++;
+					if(flowLabelCounterE > 1023){
+						flowLabelCounterE = 1;
+					}
+					fragmentationTagCounterE = (fragmentationTagCounterE + 1) % 256;
+				}
+			}
+			
+			//set the starting time for each trace
+			int recentMillis = milliseconds/traces * i;
+			int recentSeconds = recentMillis / 1000;
+			recentMillis = recentMillis % 1000;
+			
+			//generate special attributes
+			//set flow label
+			int flowLabelId = (Calculator.byteArrayToInt(startingNode.getNodeId())) % 1024;
+			int flowLabelCounter = 0;
+			//now a counter-number for the label, either from A or E
+			if(startingNode.equals(nodes.get(0))){
+				flowLabelCounter = flowLabelCounterA;
+			} else {
+				flowLabelCounter = flowLabelCounterE;
+			}
+			int flowLabel = (flowLabelId << 10) + flowLabelCounter;	
+			
+			//create a new comparison trace
+			MultihopPacketTrace tmpTrace = new MultihopPacketTrace();
+			
+			//example data ... not important, it gets overwritten to be sure of exact content
+			byte[] payload = new byte[]{107,59,0,0,1,58,2,(byte) 133,0,122,46,0,0,0,0,1,1,0,0,0,0,0,0};
+			byte[] fragpayload = new byte[]{107,59,0,0,1,58,2,5,4,3,2};
+			//now use flowLabel to change the payload at position 2,3 and 4
+			
+			//set all the way by hand, everytime 6 MACPackets + 6 fragmentation packets
+			MACPacket p1 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p1.setPayload(payload);
+			
+			p1.setSourceNode(startingNode);
+			p1.setDestinationNode(nodes.get(1));
+			
+			//set iphc flow label and starting- and ending node and fragmentation
+			p1.setIPHC(true);
+			p1.setFlowLabel(flowLabel);
+			p1.setOriginator(startingNode.getNodeId());
+			p1.setFinalDestination(endingNode.getNodeId());
+			p1.setFragmentationFirstHeader(true);
+			if(startingNode.equals(nodes.get(0))){
+				p1.setDatagramTag(fragmentationTagCounterA);
+			} else {
+				p1.setDatagramTag(fragmentationTagCounterE);
+			}
+			p1.setDatagramSize(20);
+			
+			p1.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p1.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p1.setMicroSeconds(new byte[]{0,0,0,0});
+			p1.setLoggedAt(startingNode);
+			
+			MACPacket p1frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p1frag.setPayload(fragpayload);
+			
+			p1frag.setSourceNode(startingNode);
+			p1frag.setDestinationNode(nodes.get(1));
+			
+			//set iphc flow label and starting- and ending node
+			p1frag.setIPHC(false);
+			p1frag.setFragmentationSubsequentHeader(true);
+			if(startingNode.equals(nodes.get(0))){
+				p1frag.setDatagramTag(fragmentationTagCounterA);
+			} else {
+				p1frag.setDatagramTag(fragmentationTagCounterE);
+			}
+			p1frag.setDatagramSize(20);
+			
+			p1frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p1frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p1frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p1frag.setLoggedAt(startingNode);
+			
+			//adding packet one (sent packet)
+			startingNode.addSentPackets(p1);
+			packets.add(p1);
+			tmpTrace.addPacket(p1);
+			//adding packet one fragmentation (sent packet)
+			startingNode.addSentPackets(p1frag);
+			packets.add(p1frag);
+			tmpTrace.addPacket(p1frag);
+			
+			
+			
+			//first packet is added
+			//update time
+			if(recentMillis<500){
+				recentMillis += 500;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 500;
+			}
+			
+			
+			
+			
+			//now second packet
+			MACPacket p2 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p2.setPayload(payload);
+			
+			p2.setSourceNode(startingNode);
+			p2.setDestinationNode(nodes.get(1));
+			
+			//set iphc flow label and starting- and ending node
+			p2.setIPHC(true);
+			p2.setFlowLabel(flowLabel);
+			p2.setOriginator(startingNode.getNodeId());
+			p2.setFinalDestination(endingNode.getNodeId());
+			p2.setFragmentationFirstHeader(true);
+			if(startingNode.equals(nodes.get(0))){
+				p2.setDatagramTag(fragmentationTagCounterA);
+			} else {
+				p2.setDatagramTag(fragmentationTagCounterE);
+			}
+			p2.setDatagramSize(20);
+			
+			p2.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p2.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p2.setMicroSeconds(new byte[]{0,0,0,0});
+			p2.setLoggedAt(nodes.get(1));
+			
+			MACPacket p2frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p2frag.setPayload(fragpayload);
+			
+			p2frag.setSourceNode(startingNode);
+			p2frag.setDestinationNode(nodes.get(1));
+			
+			//set iphc flow label and starting- and ending node
+			p2frag.setIPHC(false);
+			p2frag.setFragmentationSubsequentHeader(true);
+			if(startingNode.equals(nodes.get(0))){
+				p2frag.setDatagramTag(fragmentationTagCounterA);
+			} else {
+				p2frag.setDatagramTag(fragmentationTagCounterE);
+			}
+			p2frag.setDatagramSize(20);
+			
+			p2frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p2frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p2frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p2frag.setLoggedAt(nodes.get(1));
+			
+			//adding packet two (received packet)
+			nodes.get(1).addReceivedPackets(p2);
+			packets.add(p2);
+			tmpTrace.addPacket(p2);
+			
+			//adding packet two fragmentation (received packet)
+			nodes.get(1).addReceivedPackets(p2frag);
+			packets.add(p2frag);
+			tmpTrace.addPacket(p2frag);
+			
+			//packet is added
+			//update time
+			if(recentMillis<900){
+				recentMillis += 100;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 900;
+			}
+			
+			MACPacket p3 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p3.setPayload(payload);
+					
+			p3.setSourceNode(nodes.get(1));
+			p3.setDestinationNode(nodes.get(2));
+			
+			//set iphc flow label and starting- and ending node
+			p3.setIPHC(true);
+			p3.setFlowLabel(flowLabel);
+			p3.setOriginator(startingNode.getNodeId());
+			p3.setFinalDestination(endingNode.getNodeId());
+			p3.setFragmentationFirstHeader(true);
+			p3.setDatagramTag(fragmentationTagCounterB);
+			p3.setDatagramSize(20);
+			
+			p3.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p3.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p3.setMicroSeconds(new byte[]{0,0,0,0});
+			p3.setLoggedAt(nodes.get(1));
+			
+			MACPacket p3frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p3frag.setPayload(fragpayload);
+			
+			p3frag.setSourceNode(nodes.get(1));
+			p3frag.setDestinationNode(nodes.get(2));
+			
+			//set iphc flow label and starting- and ending node
+			p3frag.setIPHC(false);
+			p3frag.setFragmentationSubsequentHeader(true);
+			p3frag.setDatagramTag(fragmentationTagCounterB);
+			p3frag.setDatagramSize(20);
+			
+			p3frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p3frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p3frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p3frag.setLoggedAt(nodes.get(1));
+			
+			//adding packet three (sent packet)
+			nodes.get(1).addSentPackets(p3);
+			packets.add(p3);
+			tmpTrace.addPacket(p3);
+			
+			//adding packet three fragmentation (sent packet)
+			nodes.get(1).addSentPackets(p3frag);
+			packets.add(p3frag);
+			tmpTrace.addPacket(p3frag);
+
+			
+			
+			//packet is added
+			//update time
+			if(recentMillis<500){
+				recentMillis += 500;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 500;
+			}
+			
+			
+			
+			//now second packet
+			MACPacket p4 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p4.setPayload(payload);
+			
+			p4.setSourceNode(nodes.get(1));
+			p4.setDestinationNode(nodes.get(2));
+			
+			//set iphc flow label and starting- and ending node
+			p4.setIPHC(true);
+			p4.setFlowLabel(flowLabel);
+			p4.setOriginator(startingNode.getNodeId());
+			p4.setFinalDestination(endingNode.getNodeId());
+			p4.setFragmentationFirstHeader(true);
+			p4.setDatagramTag(fragmentationTagCounterB);
+			p4.setDatagramSize(20);
+			
+			p4.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p4.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p4.setMicroSeconds(new byte[]{0,0,0,0});
+			p4.setLoggedAt(nodes.get(2));
+			
+			MACPacket p4frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p4frag.setPayload(fragpayload);
+			
+			p4frag.setSourceNode(nodes.get(1));
+			p4frag.setDestinationNode(nodes.get(2));
+			
+			//set iphc flow label and starting- and ending node
+			p4frag.setIPHC(false);
+			p4frag.setFragmentationSubsequentHeader(true);
+			p4frag.setDatagramTag(fragmentationTagCounterB);
+			p4frag.setDatagramSize(20);
+			
+			p4frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p4frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p4frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p4frag.setLoggedAt(nodes.get(2));
+			
+			//adding packet four (received packet)
+			nodes.get(2).addReceivedPackets(p4);
+			packets.add(p4);
+			tmpTrace.addPacket(p4);
+			
+			//adding packet four fragmentation (received packet)
+			nodes.get(2).addReceivedPackets(p4frag);
+			packets.add(p4frag);
+			tmpTrace.addPacket(p4frag);
+			
+			//increase counter for individual tags
+			fragmentationTagCounterB++;
+			
+			//packet is added
+			//update time
+			if(recentMillis<900){
+				recentMillis += 100;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 900;
+			}
+			
+			MACPacket p5 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p5.setPayload(payload);
+			
+			p5.setSourceNode(nodes.get(2));
+			p5.setDestinationNode(endingNode);
+			
+			//set iphc flow label and starting- and ending node
+			p5.setIPHC(true);
+			p5.setFlowLabel(flowLabel);
+			p5.setOriginator(startingNode.getNodeId());
+			p5.setFinalDestination(endingNode.getNodeId());
+			p5.setFragmentationFirstHeader(true);
+			p5.setDatagramTag(fragmentationTagCounterC);
+			p5.setDatagramSize(20);
+			
+			p5.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p5.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p5.setMicroSeconds(new byte[]{0,0,0,0});
+			p5.setLoggedAt(nodes.get(2));
+			
+			MACPacket p5frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p5frag.setPayload(fragpayload);
+			
+			p5frag.setSourceNode(nodes.get(2));
+			p5frag.setDestinationNode(endingNode);
+			
+			//set iphc flow label and starting- and ending node
+			p5frag.setIPHC(false);
+			p5frag.setFragmentationSubsequentHeader(true);
+			p5frag.setDatagramTag(fragmentationTagCounterC);
+			p5frag.setDatagramSize(20);
+			
+			p5frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p5frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p5frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p5frag.setLoggedAt(nodes.get(2));
+			
+			//adding packet five (sent packet)
+			nodes.get(2).addSentPackets(p5);
+			packets.add(p5);
+			tmpTrace.addPacket(p5);
+
+			//adding packet five fragmentation (sent packet)
+			nodes.get(2).addSentPackets(p5frag);
+			packets.add(p5frag);
+			tmpTrace.addPacket(p5frag);
+			
+			
+			//packet is added
+			//update time
+			if(recentMillis<500){
+				recentMillis += 500;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 500;
+			}
+
+			
+			
+			//now the sixth and last packet
+			MACPacket p6 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p6.setPayload(payload);
+			
+			p6.setSourceNode(nodes.get(2));
+			p6.setDestinationNode(endingNode);
+			
+			//set iphc flow label and starting- and ending node
+			p6.setIPHC(true);
+			p6.setFlowLabel(flowLabel);
+			p6.setOriginator(startingNode.getNodeId());
+			p6.setFinalDestination(endingNode.getNodeId());
+			p6.setFragmentationFirstHeader(true);
+			p6.setDatagramTag(fragmentationTagCounterC);
+			p6.setDatagramSize(20);
+			
+			p6.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p6.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p6.setMicroSeconds(new byte[]{0,0,0,0});
+			p6.setLoggedAt(endingNode);
+			
+			MACPacket p6frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p6frag.setPayload(fragpayload);
+			
+			p6frag.setSourceNode(nodes.get(2));
+			p6frag.setDestinationNode(endingNode);
+			
+			//set iphc flow label and starting- and ending node
+			p6frag.setIPHC(false);
+			p6frag.setFragmentationSubsequentHeader(true);
+			p6frag.setDatagramTag(fragmentationTagCounterC);
+			p6frag.setDatagramSize(20);
+			
+			p6frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p6frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p6frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p6frag.setLoggedAt(endingNode);
+			
+			//adding packet six (received packet)
+			endingNode.addReceivedPackets(p6);
+			packets.add(p6);
+			tmpTrace.addPacket(p6);
+			
+			//adding packet six fragmentation (received packet)
+			endingNode.addReceivedPackets(p6frag);
+			packets.add(p6frag);
+			tmpTrace.addPacket(p6frag);
+			
+			//increase counter for individual tags
+			fragmentationTagCounterC++;
+			
+			compareTraces.add(tmpTrace);
+		}
 		return compareTraces;
 	}
 	
@@ -711,22 +1198,34 @@ public class TestDataCreator {
 					startingNode = nodes.get(0);
 					endingNode = nodes.get(3);
 					routeADCount--;
-					flowLabelCounterA = (flowLabelCounterA + 1) % 1024;
+					flowLabelCounterA++;
+					if(flowLabelCounterA > 1023){
+						flowLabelCounterA = 1;
+					}
 				} else if(choice == 1 && routeAFCount > 0){
 					startingNode = nodes.get(0);
 					endingNode = nodes.get(5);
 					routeAFCount--;
-					flowLabelCounterA = (flowLabelCounterA + 1) % 1024;
+					flowLabelCounterA++;
+					if(flowLabelCounterA > 1023){
+						flowLabelCounterA = 1;
+					}
 				} else if(choice == 2 && routeEDCount > 0){
 					startingNode = nodes.get(4);
 					endingNode = nodes.get(3);
 					routeEDCount--;
-					flowLabelCounterE = (flowLabelCounterE + 1) % 1024;
+					flowLabelCounterE++;
+					if(flowLabelCounterE > 1023){
+						flowLabelCounterE = 1;
+					}
 				} else if(choice == 3 && routeEFCount > 0) {
 					startingNode = nodes.get(4);
 					endingNode = nodes.get(5);
 					routeEFCount--;
-					flowLabelCounterE = (flowLabelCounterE + 1) % 1024;
+					flowLabelCounterE++;
+					if(flowLabelCounterE > 1023){
+						flowLabelCounterE = 1;
+					}
 				}
 			}
 			
@@ -973,9 +1472,446 @@ public class TestDataCreator {
 		packets = new ArrayList<MACPacket>();
 		nodes = createNodesInOrder(6);
 		
-		//TODO: create and save traces for comparison
-		//one fourth of the traces for each possible flow in random order !
+		int milliseconds = seconds * 1000;
 		
+		//one fourth of the traces for each possible flow in random order !
+		int routeADCount = traces/4;
+		int routeAFCount = traces/4;
+		int routeEDCount = traces/4;
+		int routeEFCount = traces/4;
+		
+		//A equals 2000 (index 0)
+		//B equals 2001 ...
+		//C equals 2002
+		//D equals 2003
+		//E equals 2004
+		//F equals 2005 (index 5)
+		
+		int fragmentationTagCounterA = -1;
+		int fragmentationTagCounterB = 0;
+		int fragmentationTagCounterC = 0;
+		int fragmentationTagCounterE = -1;
+		
+		for(int i = 0; i < traces;i++){
+			//select one of the four routes by random
+			Node startingNode = null;
+			Node endingNode = null;
+			while(startingNode == null){
+				int choice = (int) (Math.random()*4);
+				if(choice == 0 && routeADCount > 0){
+					startingNode = nodes.get(0);
+					endingNode = nodes.get(3);
+					routeADCount--;
+					fragmentationTagCounterA = (fragmentationTagCounterA + 1) % 256;
+				} else if(choice == 1 && routeAFCount > 0){
+					startingNode = nodes.get(0);
+					endingNode = nodes.get(5);
+					routeAFCount--;
+					fragmentationTagCounterA = (fragmentationTagCounterA + 1) % 256;
+				} else if(choice == 2 && routeEDCount > 0){
+					startingNode = nodes.get(4);
+					endingNode = nodes.get(3);
+					routeEDCount--;
+					fragmentationTagCounterE = (fragmentationTagCounterE + 1) % 256;
+				} else if(choice == 3 && routeEFCount > 0) {
+					startingNode = nodes.get(4);
+					endingNode = nodes.get(5);
+					routeEFCount--;
+					fragmentationTagCounterE = (fragmentationTagCounterE + 1) % 256;
+				}
+			}
+			
+			//set the starting time for each trace
+			int recentMillis = milliseconds/traces * i;
+			int recentSeconds = recentMillis / 1000;
+			recentMillis = recentMillis % 1000;
+			
+			//create a new comparison trace
+			MultihopPacketTrace tmpTrace = new MultihopPacketTrace();
+			
+			//example data ... not important, it gets overwritten to be sure of exact content
+			byte[] payload = new byte[]{107,59,0,0,1,58,2,(byte) 133,0,122,46,0,0,0,0,1,1,0,0,0,0,0,0};
+			byte[] fragpayload = new byte[]{107,59,0,0,1,58,2,5,4,3,2};
+			//now use flowLabel to change the payload at position 2,3 and 4
+			
+			//set all the way by hand, everytime 6 MACPackets + 6 fragmentation packets
+			MACPacket p1 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p1.setPayload(payload);
+			
+			p1.setSourceNode(startingNode);
+			p1.setDestinationNode(nodes.get(1));
+			
+			//set iphc flow label and starting- and ending node and fragmentation
+			p1.setIPHC(true);
+			p1.setFlowLabel(-1);
+			p1.setOriginator(startingNode.getNodeId());
+			p1.setFinalDestination(endingNode.getNodeId());
+			p1.setFragmentationFirstHeader(true);
+			if(startingNode.equals(nodes.get(0))){
+				p1.setDatagramTag(fragmentationTagCounterA);
+			} else {
+				p1.setDatagramTag(fragmentationTagCounterE);
+			}
+			p1.setDatagramSize(20);
+			
+			p1.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p1.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p1.setMicroSeconds(new byte[]{0,0,0,0});
+			p1.setLoggedAt(startingNode);
+			
+			MACPacket p1frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p1frag.setPayload(fragpayload);
+			
+			p1frag.setSourceNode(startingNode);
+			p1frag.setDestinationNode(nodes.get(1));
+			
+			//set iphc flow label and starting- and ending node
+			p1frag.setIPHC(false);
+			p1frag.setFragmentationSubsequentHeader(true);
+			if(startingNode.equals(nodes.get(0))){
+				p1frag.setDatagramTag(fragmentationTagCounterA);
+			} else {
+				p1frag.setDatagramTag(fragmentationTagCounterE);
+			}
+			p1frag.setDatagramSize(20);
+			
+			p1frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p1frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p1frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p1frag.setLoggedAt(startingNode);
+			
+			//adding packet one (sent packet)
+			startingNode.addSentPackets(p1);
+			packets.add(p1);
+			tmpTrace.addPacket(p1);
+			//adding packet one fragmentation (sent packet)
+			startingNode.addSentPackets(p1frag);
+			packets.add(p1frag);
+			tmpTrace.addPacket(p1frag);
+			
+			
+			
+			//first packet is added
+			//update time
+			if(recentMillis<500){
+				recentMillis += 500;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 500;
+			}
+			
+			
+			
+			
+			//now second packet
+			MACPacket p2 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p2.setPayload(payload);
+			
+			p2.setSourceNode(startingNode);
+			p2.setDestinationNode(nodes.get(1));
+			
+			//set iphc flow label and starting- and ending node
+			p2.setIPHC(true);
+			p2.setFlowLabel(-1);
+			p2.setOriginator(startingNode.getNodeId());
+			p2.setFinalDestination(endingNode.getNodeId());
+			p2.setFragmentationFirstHeader(true);
+			if(startingNode.equals(nodes.get(0))){
+				p2.setDatagramTag(fragmentationTagCounterA);
+			} else {
+				p2.setDatagramTag(fragmentationTagCounterE);
+			}
+			p2.setDatagramSize(20);
+			
+			p2.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p2.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p2.setMicroSeconds(new byte[]{0,0,0,0});
+			p2.setLoggedAt(nodes.get(1));
+			
+			MACPacket p2frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p2frag.setPayload(fragpayload);
+			
+			p2frag.setSourceNode(startingNode);
+			p2frag.setDestinationNode(nodes.get(1));
+			
+			//set iphc flow label and starting- and ending node
+			p2frag.setIPHC(false);
+			p2frag.setFragmentationSubsequentHeader(true);
+			if(startingNode.equals(nodes.get(0))){
+				p2frag.setDatagramTag(fragmentationTagCounterA);
+			} else {
+				p2frag.setDatagramTag(fragmentationTagCounterE);
+			}
+			p2frag.setDatagramSize(20);
+			
+			p2frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p2frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p2frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p2frag.setLoggedAt(nodes.get(1));
+			
+			//adding packet two (received packet)
+			nodes.get(1).addReceivedPackets(p2);
+			packets.add(p2);
+			tmpTrace.addPacket(p2);
+			
+			//adding packet two fragmentation (received packet)
+			nodes.get(1).addReceivedPackets(p2frag);
+			packets.add(p2frag);
+			tmpTrace.addPacket(p2frag);
+			
+			//packet is added
+			//update time
+			if(recentMillis<900){
+				recentMillis += 100;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 900;
+			}
+			
+			MACPacket p3 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p3.setPayload(payload);
+					
+			p3.setSourceNode(nodes.get(1));
+			p3.setDestinationNode(nodes.get(2));
+			
+			//set iphc flow label and starting- and ending node
+			p3.setIPHC(true);
+			p3.setFlowLabel(-1);
+			p3.setOriginator(startingNode.getNodeId());
+			p3.setFinalDestination(endingNode.getNodeId());
+			p3.setFragmentationFirstHeader(true);
+			p3.setDatagramTag(fragmentationTagCounterB);
+			p3.setDatagramSize(20);
+			
+			p3.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p3.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p3.setMicroSeconds(new byte[]{0,0,0,0});
+			p3.setLoggedAt(nodes.get(1));
+			
+			MACPacket p3frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p3frag.setPayload(fragpayload);
+			
+			p3frag.setSourceNode(nodes.get(1));
+			p3frag.setDestinationNode(nodes.get(2));
+			
+			//set iphc flow label and starting- and ending node
+			p3frag.setIPHC(false);
+			p3frag.setFragmentationSubsequentHeader(true);
+			p3frag.setDatagramTag(fragmentationTagCounterB);
+			p3frag.setDatagramSize(20);
+			
+			p3frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p3frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p3frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p3frag.setLoggedAt(nodes.get(1));
+			
+			//adding packet three (sent packet)
+			nodes.get(1).addSentPackets(p3);
+			packets.add(p3);
+			tmpTrace.addPacket(p3);
+			
+			//adding packet three fragmentation (sent packet)
+			nodes.get(1).addSentPackets(p3frag);
+			packets.add(p3frag);
+			tmpTrace.addPacket(p3frag);
+
+			
+			
+			//packet is added
+			//update time
+			if(recentMillis<500){
+				recentMillis += 500;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 500;
+			}
+			
+			
+			
+			//now second packet
+			MACPacket p4 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p4.setPayload(payload);
+			
+			p4.setSourceNode(nodes.get(1));
+			p4.setDestinationNode(nodes.get(2));
+			
+			//set iphc flow label and starting- and ending node
+			p4.setIPHC(true);
+			p4.setFlowLabel(-1);
+			p4.setOriginator(startingNode.getNodeId());
+			p4.setFinalDestination(endingNode.getNodeId());
+			p4.setFragmentationFirstHeader(true);
+			p4.setDatagramTag(fragmentationTagCounterB);
+			p4.setDatagramSize(20);
+			
+			p4.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p4.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p4.setMicroSeconds(new byte[]{0,0,0,0});
+			p4.setLoggedAt(nodes.get(2));
+			
+			MACPacket p4frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p4frag.setPayload(fragpayload);
+			
+			p4frag.setSourceNode(nodes.get(1));
+			p4frag.setDestinationNode(nodes.get(2));
+			
+			//set iphc flow label and starting- and ending node
+			p4frag.setIPHC(false);
+			p4frag.setFragmentationSubsequentHeader(true);
+			p4frag.setDatagramTag(fragmentationTagCounterB);
+			p4frag.setDatagramSize(20);
+			
+			p4frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p4frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p4frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p4frag.setLoggedAt(nodes.get(2));
+			
+			//adding packet four (received packet)
+			nodes.get(2).addReceivedPackets(p4);
+			packets.add(p4);
+			tmpTrace.addPacket(p4);
+			
+			//adding packet four fragmentation (received packet)
+			nodes.get(2).addReceivedPackets(p4frag);
+			packets.add(p4frag);
+			tmpTrace.addPacket(p4frag);
+			
+			//increase counter for individual tags
+			fragmentationTagCounterB++;
+			
+			//packet is added
+			//update time
+			if(recentMillis<900){
+				recentMillis += 100;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 900;
+			}
+			
+			MACPacket p5 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p5.setPayload(payload);
+			
+			p5.setSourceNode(nodes.get(2));
+			p5.setDestinationNode(endingNode);
+			
+			//set iphc flow label and starting- and ending node
+			p5.setIPHC(true);
+			p5.setFlowLabel(-1);
+			p5.setOriginator(startingNode.getNodeId());
+			p5.setFinalDestination(endingNode.getNodeId());
+			p5.setFragmentationFirstHeader(true);
+			p5.setDatagramTag(fragmentationTagCounterC);
+			p5.setDatagramSize(20);
+			
+			p5.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p5.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p5.setMicroSeconds(new byte[]{0,0,0,0});
+			p5.setLoggedAt(nodes.get(2));
+			
+			MACPacket p5frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p5frag.setPayload(fragpayload);
+			
+			p5frag.setSourceNode(nodes.get(2));
+			p5frag.setDestinationNode(endingNode);
+			
+			//set iphc flow label and starting- and ending node
+			p5frag.setIPHC(false);
+			p5frag.setFragmentationSubsequentHeader(true);
+			p5frag.setDatagramTag(fragmentationTagCounterC);
+			p5frag.setDatagramSize(20);
+			
+			p5frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p5frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p5frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p5frag.setLoggedAt(nodes.get(2));
+			
+			//adding packet five (sent packet)
+			nodes.get(2).addSentPackets(p5);
+			packets.add(p5);
+			tmpTrace.addPacket(p5);
+
+			//adding packet five fragmentation (sent packet)
+			nodes.get(2).addSentPackets(p5frag);
+			packets.add(p5frag);
+			tmpTrace.addPacket(p5frag);
+			
+			
+			//packet is added
+			//update time
+			if(recentMillis<500){
+				recentMillis += 500;
+			} else {
+				recentSeconds ++;
+				recentMillis -= 500;
+			}
+
+			
+			
+			//now the sixth and last packet
+			MACPacket p6 = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p6.setPayload(payload);
+			
+			p6.setSourceNode(nodes.get(2));
+			p6.setDestinationNode(endingNode);
+			
+			//set iphc flow label and starting- and ending node
+			p6.setIPHC(true);
+			p6.setFlowLabel(-1);
+			p6.setOriginator(startingNode.getNodeId());
+			p6.setFinalDestination(endingNode.getNodeId());
+			p6.setFragmentationFirstHeader(true);
+			p6.setDatagramTag(fragmentationTagCounterC);
+			p6.setDatagramSize(20);
+			
+			p6.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p6.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p6.setMicroSeconds(new byte[]{0,0,0,0});
+			p6.setLoggedAt(endingNode);
+			
+			MACPacket p6frag = new MACPacket(true);
+			//payload must be set first, because it gets overwritten by other attributes
+			p6frag.setPayload(fragpayload);
+			
+			p6frag.setSourceNode(nodes.get(2));
+			p6frag.setDestinationNode(endingNode);
+			
+			//set iphc flow label and starting- and ending node
+			p6frag.setIPHC(false);
+			p6frag.setFragmentationSubsequentHeader(true);
+			p6frag.setDatagramTag(fragmentationTagCounterC);
+			p6frag.setDatagramSize(20);
+			
+			p6frag.setSeconds(ByteBuffer.allocate(4).putInt(recentSeconds).array());
+			p6frag.setMilliSeconds(ByteBuffer.allocate(4).putInt(recentMillis).array());
+			p6frag.setMicroSeconds(new byte[]{0,0,0,0});
+			p6frag.setLoggedAt(endingNode);
+			
+			//adding packet six (received packet)
+			endingNode.addReceivedPackets(p6);
+			packets.add(p6);
+			tmpTrace.addPacket(p6);
+			
+			//adding packet six fragmentation (received packet)
+			endingNode.addReceivedPackets(p6frag);
+			packets.add(p6frag);
+			tmpTrace.addPacket(p6frag);
+			
+			//increase counter for individual tags
+			fragmentationTagCounterC++;
+			
+			compareTraces.add(tmpTrace);
+		}
 		return compareTraces;
 	}
 	

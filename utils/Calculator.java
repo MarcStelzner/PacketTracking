@@ -2,13 +2,21 @@ package packettracking.utils;
 
 import java.util.Arrays;
 
+/**
+ * Calculator is a util class to provide static methods for parsing between data types.
+ * 
+ * @author 		Marc
+ * @version     1.0                 
+ * @since       2013-01-23        
+ */
 public class Calculator {
+	
 	/**
 	 * This Method turns bytearrays of a maximum length of 4 (byte) into integer
 	 * 
 	 * @param length
 	 * @param array
-	 * @return
+	 * @return newInt
 	 */
 	public static int byteArrayToInt(byte[] array){
 		int newInt = 0;
@@ -27,7 +35,7 @@ public class Calculator {
 	 * 
 	 * @param length
 	 * @param array
-	 * @return
+	 * @return newLong
 	 */
 	public static long byteArrayToLong(byte[] array){
 		long newLong = 0;
@@ -41,7 +49,12 @@ public class Calculator {
 		return newLong;
 	}
 	
-	
+	/**
+	 * This Method turns bytearrays of any length into a hex-String
+	 * 
+	 * @param bytes
+	 * @return String
+	 */
 	public static String bytesToHex(byte[] bytes) {
 	    final char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 	    char[] hexChars = new char[bytes.length * 2];
@@ -54,14 +67,19 @@ public class Calculator {
 	    return new String(hexChars);
 	}
 	
-	
-	public static byte[] hexStringToByteArray(String s) {
-	    int len = s.length();
-	    byte[] data = new byte[len / 2];
+	/**
+	 * This Method turns a hex-String into a byte-array
+	 * 
+	 * @param string
+	 * @return String
+	 */
+	public static byte[] hexStringToByteArray(String string) {
+	    int len = string.length();
+	    byte[] byteArray = new byte[len / 2];
 	    for (int i = 0; i < len; i += 2) {
-	        data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-	                             + Character.digit(s.charAt(i+1), 16));
+	    	byteArray[i / 2] = (byte) ((Character.digit(string.charAt(i), 16) << 4)
+	                             + Character.digit(string.charAt(i+1), 16));
 	    }
-	    return data;
+	    return byteArray;
 	}
 }

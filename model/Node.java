@@ -4,6 +4,14 @@ import java.util.ArrayList;
 
 import packettracking.utils.Calculator;
 
+/**
+ * A node object holds simple information about the node, like address and location.
+ * Lists about sent and received packets allow review of the history.
+ * 
+ * @author 		Marc
+ * @version     1.0                 
+ * @since       2013-01-15        
+ */
 public class Node {
 	
 	private static final int BROADCAST = 65535;
@@ -22,10 +30,39 @@ public class Node {
 	double y;
 	double z;
 
+	/**
+	 * Standard constructor for sensornode representation
+	 * 
+	 * @param nodeId the address of the node
+	 */
 	public Node(byte[] nodeId){
 		x = -1;
 		y = -1;
 		z = -1;
+		initializeGlobal(nodeId);
+	}
+	
+	/**
+	 * Constructor including coordinates for node-location
+	 * 
+	 * @param nodeId the address of the node
+	 * @param x
+	 * @param y
+	 * @param z
+	 */
+	public Node(byte[] nodeId, double x, double y, double z){
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		initializeGlobal(nodeId);
+	}
+	
+	/**
+	 * Initialization of the variables for the constructors
+	 *
+	 * @param nodeId the address of the node
+	 */
+	private void initializeGlobal(byte[] nodeId){
 		this.nodeId = nodeId;
 		broadcast = false;
 		if(Calculator.byteArrayToInt(nodeId)==BROADCAST){
@@ -38,21 +75,29 @@ public class Node {
 		this.tracesByDestination = new ArrayList<MultihopPacketTrace>();
 	}
 	
-	public Node(byte[] nodeId, double x, double y, double z){
-		this.x = x;
-		this.y = y;
-		this.z = z;
-		this.nodeId = nodeId;
-		broadcast = false;
-		if(Calculator.byteArrayToInt(nodeId)==BROADCAST){
-			System.out.println("---------BROADCAST---------");
-			broadcast = true;
+	/**
+	 * Converts the node information into a String.
+	 * 
+	 * @return nodeToString represents the node as a String
+	 */
+	@Override
+	public String toString(){ 
+		String nodeToString = "Node ";
+		nodeToString += Calculator.bytesToHex(nodeId);
+		//only add node positions, if the exist
+		if(x != -1 && y != -1 && z != -1){
+			nodeToString += " at the coordinates "+x+" , "+y+" , "+z+" ";
 		}
-		this.sentPackets = new ArrayList<MACPacket>();
-		this.receivedPackets = new ArrayList<MACPacket>();
-		this.tracesByOrigin = new ArrayList<MultihopPacketTrace>();
-		this.tracesByDestination = new ArrayList<MultihopPacketTrace>();
+		if(broadcast){
+			nodeToString = "Broadcast";
+		}
+		
+		return nodeToString;
 	}
+	
+	/*
+	 * GETTERS AND SETTERS FOR ATTRIBUTES
+	 */
 	
 	public byte[] getNodeId() {
 		return nodeId;
@@ -122,19 +167,5 @@ public class Node {
 	
 	public boolean isBroadcast(){
 		return broadcast;
-	}
-	
-	public String toString(){ 
-		String nodeToString = "Node ";
-		nodeToString += Calculator.bytesToHex(nodeId);
-		//only add node positions, if the exist
-		if(x != -1 && y != -1 && z != -1){
-			nodeToString += " at the coordinates "+x+" , "+y+" , "+z+" ";
-		}
-		if(broadcast){
-			nodeToString = "Broadcast";
-		}
-		
-		return nodeToString;
 	}
 }

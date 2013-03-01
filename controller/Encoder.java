@@ -5,7 +5,13 @@ import java.util.ArrayList;
 import packettracking.model.MACPacket;
 import packettracking.view.EncoderView;
 
-
+/**
+ * The Encoder-class prints the packet-objects to .pcap file as an export
+ * 
+ * @author 		Marc
+ * @version     1.0                 
+ * @since       2013-01-15        
+ */
 public class Encoder {
 	
 	EncoderView view;
@@ -15,10 +21,9 @@ public class Encoder {
 	}
 	
 	/**
-	 * This class writes the collected packets to a file.
-	 * 1. Pcap-File-Header
-	 * 2. Pcap-Packet-Header
-	 * 3. Packet 		(and back to step 2 for all packets)
+	 * Main function of the class calls view to ask user for packet export
+	 *
+	 * @param packets the packet logs to print
 	 */
 	public void printPcapFile(ArrayList<MACPacket> packets){
 		//Ask user if he wants to export the data to .pcap
@@ -27,10 +32,15 @@ public class Encoder {
 		}
 	}
 	
+	/**
+	 * This class writes the collected packets to a file.
+	 * 1. Pcap-File-Header
+	 * 2. Pcap-Packet-Header
+	 * 3. Packet 		(and back to step 2 for all packets)
+	 * 
+	 * @param packets the packet logs to print
+	 */
 	private void startExport(ArrayList<MACPacket> packets){
-		byte[] outputArray = new byte[0];
-		byte[] oldOutputArray;
-		
 		System.out.println("--- Starting to print Pcap-File ---");
 		System.out.println("Start writing Pcap Header ...");
 		//Create a PCAP Header:
@@ -50,16 +60,15 @@ public class Encoder {
 		
 		System.out.println("Pcap header done. \nStart collecting "+packets.size()+" packets ...");
 		
-		oldOutputArray = pcapArray;
-		outputArray = pcapArray;
-		
 		//write all packets to an array
 		for(int i = 0; i<packets.size();i++){
-			outputArray = new byte[oldOutputArray.length+packets.get(i).toBytes().length];
-			System.arraycopy(oldOutputArray, 0, outputArray, 0, oldOutputArray.length);
-			System.arraycopy(packets.get(i).toBytes(), 0, outputArray, oldOutputArray.length, packets.get(i).toBytes().length);
-			oldOutputArray = outputArray;
+			byte[] tmpPcapArray = new byte[pcapArray.length+packets.get(i).toBytes().length];
+			System.arraycopy(pcapArray, 0, tmpPcapArray, 0, pcapArray.length);
+			System.arraycopy(packets.get(i).toBytes(), 0, tmpPcapArray, pcapArray.length, packets.get(i).toBytes().length);
+			pcapArray = tmpPcapArray;
 		}
-		view.exportDataToFile(outputArray);  
+		
+		//use view to ask for export-location
+		view.exportDataToFile(pcapArray);  
 	}
 }

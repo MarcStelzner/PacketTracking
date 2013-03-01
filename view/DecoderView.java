@@ -6,11 +6,23 @@ import java.awt.Frame;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
+/**
+ * DecoderView is the interface for the Decoder for input/output of the data
+ * 
+ * @author 		Marc
+ * @version     1.0                 
+ * @since       2013-02-14  
+ */
 public class DecoderView {
 
 	public DecoderView(){
 	}
 	
+	/**
+	 * The method opens a dialog with the user and asks for used protocols.
+	 * 
+	 * @return true if a protocol was used
+	 */
 	public boolean askForProtocols(){
 		//Ask user if any protocol (only 6lowpan is supported at the moment) was used or just plain data
 		JFrame frame = new JFrame("The Question for protocols");		
@@ -35,6 +47,11 @@ public class DecoderView {
 		}
 	}
 	
+	/**
+	 * The method opens a dialog with the user and asks for the destination where the logs to read are saved
+	 * 
+	 * @return FileDialog gets returned to the Decoder, to read answer
+	 */
 	public FileDialog askForDestination(){
 		//Dialog to load Data
 	    FileDialog fd = new FileDialog(new Frame(), "Choose the Datalog \"*.txt\" to read.", FileDialog.LOAD);

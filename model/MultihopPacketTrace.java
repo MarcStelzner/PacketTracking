@@ -1,10 +1,16 @@
 package packettracking.model;
 
 import java.util.ArrayList;
-import java.util.UUID;
 
 import packettracking.utils.Calculator;
 
+/**
+ * A MultihopPacketTrace object represents a collection of MACPacket objects as a whole packet trace.
+ * 
+ * @author 		Marc
+ * @version     1.0                 
+ * @since       2013-01-15        
+ */
 public class MultihopPacketTrace {
 	
 	//The list of packets in the stream, it should be hold chronological
@@ -24,9 +30,6 @@ public class MultihopPacketTrace {
 	private int lastTime;
 	private int lastTimeMilliseconds;
 	
-	//TODO: maybe useful as a reference
-	private final UUID uuid;
-	
 	private Node source;
 	private ArrayList<Node> intermediateNodes; // the nodes between the source and the destinations
 	private Node destination; //plural, because of (broadcasts, multicasts)
@@ -41,23 +44,10 @@ public class MultihopPacketTrace {
 	 * @param label
 	 * @param occurrence
 	 */
-	public MultihopPacketTrace(int label){
-		
+	public MultihopPacketTrace(int label){		
+		flowLabel = label;	
 		//Initializing all global variables
-		
-		packetList = new ArrayList<MACPacket>();
-		
-		flowLabel = label;
-		
-		fragmentationTags = new ArrayList<Integer>();
-		
-		// no time, because no packet yet
-		firstTime = -1;
-		firstTimeMilliseconds = -1;
-		lastTime = -1; 
-		lastTimeMilliseconds = -1;
-		
-		uuid  = UUID.randomUUID();
+		initializeGlobal();
 	}
 	
 	/**
@@ -67,14 +57,17 @@ public class MultihopPacketTrace {
 	 * @param occurrence
 	 */
 	public MultihopPacketTrace(){
-		
-		//Initializing all global variables
-		
-		packetList = new ArrayList<MACPacket>();
-		
-//		flowLabelOccurence = -1;
+		//-1 means no flow label
 		flowLabel = -1;
-		
+		//Initializing all global variables
+		initializeGlobal();
+	}
+	
+	/**
+	 * Initialization of the variables for the constructors
+	 */
+	private void initializeGlobal(){
+		packetList = new ArrayList<MACPacket>();
 		fragmentationTags = new ArrayList<Integer>(); //fragmentation not used
 		
 		// no time, because no packet yet
@@ -82,14 +75,83 @@ public class MultihopPacketTrace {
 		firstTimeMilliseconds = -1;
 		lastTime = -1; 
 		lastTimeMilliseconds = -1;
-		
-		uuid  = UUID.randomUUID();
 	}
 	
-//	public int getFlowLabelOccurence() {
-//		return flowLabelOccurence;
-//	}
+	/**
+	 * Converts the most relevant trace information into a String.
+	 * 
+	 * @return traceToString the trace as a String
+	 */
+	@Override
+	public String toString(){
+		String traceToString = "Packet trace startet at a time of " + firstTime + "." + firstTimeMilliseconds + " and ended at a time of " + lastTime + "." + lastTimeMilliseconds + ".\n" 
+							+ "It has the flowlabel "+flowLabel+ ".\n"
+							+ "The trace's originator: "
+							+ source.toString() +"\n"
+							+ "The final destination of the trace was: "
+							+ destination.toString() +"\n"
+							+ "The "+intermediateNodes.size()+" intermediate nodes on the way are the following: \n";
+		for(Node n : intermediateNodes){
+			traceToString += n.toString() + "\n";
+		}
+		traceToString += "The trace consists of the following "+packetList.size()+" log(s): \n";
+		for(MACPacket p : packetList){
+			traceToString += p.toString();
+		}
+		traceToString += "This was all information about the trace.\n\n";
+		
+		
+		return traceToString;
+	}
+	
+	/**
+	 * This method adds a Packet to the Stream and performs some analyzing to set other parameters in the stream:
+	 * - check/set Fragmentation Datagam Tag
+	 * - check/set firstTime
+	 * - check/set lastTime
+	 * 
+	 * @param packet
+	 */
+	public void addPacket(MACPacket packet){
+		int packetSeconds = Calculator.byteArrayToInt(packet.getSeconds());
+		int packetMilliSeconds = Calculator.byteArrayToInt(packet.getMilliSeconds());
 
+		//if there is no first time or the new first Time is earlier, than renew it
+		if(firstTime < 0 || firstTime > packetSeconds 
+				|| ((firstTime == packetSeconds)&&(firstTimeMilliseconds > packetMilliSeconds))){
+			firstTime = packetSeconds;
+			firstTimeMilliseconds = packetMilliSeconds;
+		}
+
+		//if there is no last time or the new first Time is earlier, than renew it
+		if(lastTime < packetSeconds 
+				|| ((lastTime == packetSeconds)&&(lastTimeMilliseconds < packetMilliSeconds))){
+			lastTime = packetSeconds;
+			lastTimeMilliseconds = packetMilliSeconds;
+		}
+		
+		//at last, add fragmentation tag to the list if there's (a new) one 
+		int packetTag = packet.getFragmentationTag();
+		if(packetTag >= 0){
+			boolean exists = false;
+			for(int tag : fragmentationTags){
+				if(tag == packetTag){
+					exists = true;
+				}
+			}
+			if(!exists){
+				fragmentationTags.add(packetTag);
+			}
+		}
+		
+		//at last, add the packet
+		packetList.add(packet);
+	}
+	
+	/*
+	 * GETTERS AND SETTERS FOR ATTRIBUTES
+	 */
+	
 	public int getFlowLabel() {
 		return flowLabel;
 	}
@@ -129,35 +191,19 @@ public class MultihopPacketTrace {
 	public int getFirstTime() {
 		return firstTime;
 	}
-	
-//	public void setFirstTime(int firstTime) {
-//		this.firstTime = firstTime;
-//	}
-	
+
 	public int getFirstTimeMilliseconds() {
 		return firstTimeMilliseconds;
 	}
-	
-//	public void setFirstTimeMilliseconds(int firstTimeMilliseconds) {
-//		this.firstTimeMilliseconds = firstTimeMilliseconds;
-//	}
 
 	public int getLastTime() {
 		return lastTime;
 	}
-	
-//	public void setLastTime(int lastTime) {
-//		this.lastTime = lastTime;
-//	}
-	
+
 	public int getLastTimeMilliseconds() {
 		return lastTimeMilliseconds;
 	}
-	
-//	public void setLastTimeMilliseconds(int lastTimeMilliseconds) {
-//		this.lastTimeMilliseconds = lastTimeMilliseconds;
-//	}
-	
+
 	public Node getSource(){
 		return source;
 	}
@@ -180,55 +226,6 @@ public class MultihopPacketTrace {
 	
 	public void setDestination(Node destination){
 		this.destination = destination;
-	}
-
-	
-	public UUID getUuid() {
-		return uuid;
-	}
-
-	/**
-	 * This method adds a Packet to the Stream and performs some analyzing to set other parameters in the stream:
-	 * - check/set Fragmentation Datagam Tag
-	 * - check/set firstTime
-	 * - check/set lastTime
-	 * 
-	 * @param packet
-	 */
-	public void addPacket(MACPacket packet){
-		int packetSeconds = Calculator.byteArrayToInt(packet.getSeconds());
-		int packetMilliSeconds = Calculator.byteArrayToInt(packet.getMilliSeconds());
-		
-		//if there is no first time or the new first Time is earlier, than renew it
-		if(firstTime < 0 || firstTime > packetSeconds 
-				|| ((firstTime == packetSeconds)&&(firstTimeMilliseconds > packetMilliSeconds))){
-			firstTime = packetSeconds;
-			firstTimeMilliseconds = packetMilliSeconds;
-		}
-		
-		//if there is no last time or the new first Time is earlier, than renew it
-		if(lastTime < packetSeconds 
-				|| ((lastTime == packetSeconds)&&(lastTime < packetMilliSeconds))){
-			lastTime = packetSeconds;
-			lastTimeMilliseconds = packetMilliSeconds;
-		}
-		
-		//at last, add fragmentation tag to the list if there's (a new) one 
-		int packetTag = packet.getFragmentationTag();
-		if(packetTag > 0){
-			boolean exists = false;
-			for(int tag : fragmentationTags){
-				if(tag == packetTag){
-					exists = true;
-				}
-			}
-			if(!exists){
-				fragmentationTags.add(packetTag);
-			}
-		}
-		
-		//at last, add the packet
-		packetList.add(packet);
 	}
 	
 	public ArrayList<MACPacket> getPacketList() {
@@ -255,24 +252,5 @@ public class MultihopPacketTrace {
 		this.longIPDestination = longIPDestination;
 	}
 
-	public String toString(){
-		String traceToString = "Packet trace startet at a time of " + firstTime + " and ended at a time of " + lastTime + ".\n" 
-							+ "It has the flowlabel "+flowLabel+ ".\n"
-							+ "The trace's originator: "
-							+ source.toString() +"\n"
-							+ "The final destination of the trace was: "
-							+ destination.toString() +"\n"
-							+ "The "+intermediateNodes.size()+" intermediate nodes on the way are the following: \n";
-		for(Node n : intermediateNodes){
-			traceToString += n.toString() + "\n";
-		}
-		traceToString += "The trace consists of the following "+packetList.size()+" packet(s): \n";
-		for(MACPacket p : packetList){
-			traceToString += p.toString();
-		}
-		traceToString += "This was all information about the trace.\n\n";
-		
-		
-		return traceToString;
-	}
+
 }

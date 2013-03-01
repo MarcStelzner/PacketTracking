@@ -8,8 +8,9 @@ import packettracking.utils.Calculator;
  * This class is designed to give additional information about 6LoWPAN packets,
  * which does not involve IPv6 information yet
  * 
- * @author Marc
- *
+ * @author 		Marc
+ * @version     1.0                 
+ * @since       2013-01-15        
  */
 public class SixLoWPANPacket {
 	
@@ -60,6 +61,12 @@ public class SixLoWPANPacket {
 		createPacket(packet);
 	}
 	
+	/**
+	 * On creating a SixLoWPAN packet, this method will be called to parse the payload into variables.
+	 * It checks for existing dispatch header before calling the according subroutine.
+	 * 
+	 * @param packet payload of the MACPacket to parse
+	 */
 	private void createPacket(byte[] packet){
 		headerSize = 0;
 		byte dispatchByte = packet[0];
@@ -78,10 +85,8 @@ public class SixLoWPANPacket {
 			fragmentationFirstHeader = true;
 			packet = createFragmentationFirstHeader(packet);
 			dispatchByte = packet[0];
-//			for (byte b : packet) {
-//				System.out.format("0x%x ", b);
-//			}
 		}
+		
 		//2.b. check for Fragmentation header
 		else if(maskedByte == 224){
 			fragmentationSubsequentHeader = true;
@@ -111,6 +116,12 @@ public class SixLoWPANPacket {
 		//TODO: Now this payload could be passed to ICMPv6/UDP Header
 	}
 	
+	/**
+	 * Starts to parse a mesh addressing header, because an according dispatch header was found.
+	 * 
+	 * @param packet payload of the MACPacket to parse for mesh header
+	 * @return packet as the remaining payload
+	 */
 	private byte[] createMeshAddressingHeader(byte[] packet){
 		int packetPosition = 0;
 		byte actualByte = packet[packetPosition];
@@ -159,15 +170,27 @@ public class SixLoWPANPacket {
 		return Arrays.copyOfRange(packet, packetPosition, packet.length);
 	}
 	
-	
+	/**
+	 * Starts to parse a fragmentation first header, because an according dispatch header was found.
+	 * The method uses the corporate fragmentation header for parsing in common with the subsequent header.
+	 * 
+	 * @param packet payload of the MACPacket to parse for fragmentation first header
+	 * @return packet as the remaining payload
+	 */
 	private byte[] createFragmentationFirstHeader(byte[] packet){
 		return createCorporateFragmentationHeader(packet);
 	}
 
+	/**
+	 * Starts to parse a subsequent fragmentation header, because an according dispatch header was found.
+	 * The method uses the corporate fragmentation header for parsing in common with the first fragmentation header.
+	 * 
+	 * @param packet payload of the MACPacket to parse for fragmentation subsequent header
+	 * @return packet as the remaining payload
+	 */
 	private byte[] createFragmentationSubsequentHeader(byte[] packet){
 		packet = createCorporateFragmentationHeader(packet);
 		int packetPosition = 0;
-		
 		//get the datagramOffset
 		datagramOffset = Calculator.byteArrayToInt(Arrays.copyOfRange(packet, packetPosition, packetPosition+2));
 		packetPosition+=2;
@@ -180,10 +203,11 @@ public class SixLoWPANPacket {
 	/**
 	 * This Method creates the part the first and subsequent header have in common
 	 * 
-	 * @param packet
-	 * @return
+	 * @param packet payload of the MACPacket to parse for a fragmentation header
+	 * @return packet as the remaining payload
 	 */
 	private byte[] createCorporateFragmentationHeader(byte[] packet){
+		//the packetPosition marks the index for the actual byte the parser is at
 		int packetPosition = 0;
 		byte actualByte = packet[packetPosition];
 		
@@ -202,10 +226,16 @@ public class SixLoWPANPacket {
 	}
 	
 
+	/**
+	 * Starts to parse an IPHC header, because an according dispatch header was found.
+	 * 
+	 * @param packet payload of the MACPacket to parse for an IPHC header
+	 * @return packet as the remaining payload
+	 */
 	private byte[] createIPHCHeader(byte[] packet){
+		//the packetPosition marks the index for the actual byte the parser is at
 		int packetPosition = 0;
 		byte actualByte = packet[packetPosition];
-		
 		//check TF 
 		int maskedByte = (actualByte&(byte)24) & 0xFF;
 		tf = maskedByte >> 3;
@@ -402,12 +432,16 @@ public class SixLoWPANPacket {
 			//additional context for source and destination
 		}
 		
-		//TODO: NHC if there is any
+		//TODO: NHC header parsing, if there is such header, though not important for tracking at this point
 		
 		headerSize += packetPosition;
 		//return the remaining payload
 		return Arrays.copyOfRange(packet, packetPosition, packet.length);
 	}
+	
+	/*
+	 * GETTERS AND SETTERS FOR ATTRIBUTES
+	 */
 
 	public int getHeaderSize() {
 		return headerSize;
@@ -528,36 +562,45 @@ public class SixLoWPANPacket {
 	public byte[] getDestination() {
 		return destination;
 	}	
+
+	public byte[] getPayload() {
+		return payload;
+	}
 	
-	/**
-	 * TODO: TESTMETHOD
+	/*
+	 * TESTMETHODS - ONLY USED FOR TESTDATACREATOR
+	 * needed to get public access to attributes
 	 */
+	
 	public void setFlowLabel(int flowLabel) {
 		this.flowLabel = flowLabel;
 	}
 	
-	/**
-	 * TODO: TESTMETHOD
-	 */
 	public void setIPHC(boolean iphc) {
 		this.iphcHeader = iphc;
 	}
-	
-	/**
-	 * TODO: TESTMETHOD
-	 */
+
 	public void setOriginator(byte[] originator) {
 		source = originator;
 	}
 
-	/**
-	 * TODO: TESTMETHOD
-	 */
 	public void setFinalDestination(byte[] finalDestination) {
 		destination = finalDestination;
 	}
 
-	public byte[] getPayload() {
-		return payload;
+	public void setFragmentationFirstHeader(boolean fragFirst) {
+		fragmentationFirstHeader = fragFirst;
+	}
+
+	public void setFragmentationSubsequentHeader(boolean fragSubsequent) {
+		fragmentationSubsequentHeader = fragSubsequent;
+	}
+
+	public void setDatagramTag(int datagramTag) {
+		this.datagramTag = datagramTag;
+	}
+
+	public void setDatagramSize(int datagramSize) {
+		this.datagramSize = datagramSize;
 	}
 }
